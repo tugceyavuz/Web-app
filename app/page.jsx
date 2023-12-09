@@ -14,6 +14,7 @@ const Home = () => {
   const [isButtonDisabled, setIsButtonDisabled] = useState(true);
 
   useEffect(() => {
+    //get the list of problems from firestore
     const fetchProblems = async () => {
       try {
         const eventsCollection = collection(db, 'events');
@@ -57,6 +58,7 @@ const Home = () => {
     setIsButtonDisabled(!newName.trim());
   };
 
+  //add user to the problem
   const handleJoinClick = async () => {
     try {
       // Validate that 'selectedProblem' and 'isim' are not empty
@@ -88,12 +90,18 @@ const Home = () => {
             chosenProblem.partipicant = [];
           }
   
-          // Add the new participant to the end of the existing participants array
-          chosenProblem.partipicant.push({ id: userId, name: isim });
-
+          // Get the existing problems array
+          const updatedProblems = [...eventProblems];
+  
+          // Update the participants array inside the specified problem
+          updatedProblems[chosenProblemIndex] = {
+            ...chosenProblem,
+            partipicant: [...chosenProblem.partipicant, { id: userId, name: isim }],
+          };
+  
           // Update Firestore with the new participant
-          updateDoc(doc.ref, { [`problems.${chosenProblemIndex}.partipicant`]: chosenProblem.partipicant });
-
+          updateDoc(doc.ref, { problems: updatedProblems });
+  
           // Redirect the user to the meeting page
           router.push('/meeting-page');
         }
@@ -102,6 +110,8 @@ const Home = () => {
       console.error('Error updating Firestore:', error);
     }
   };
+  
+  
 
   return (
     <section className="w-full flex-center flex-col h-screen">  
