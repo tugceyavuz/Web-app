@@ -15,6 +15,12 @@ function AdminPanel() {
     const [newEventName, setNewEventName] = useState('');
     const [newProblemName, setNewProblemName] = useState('');
     const [lastCreatedEvent, setLastCreatedEvent] = useState(null);
+    const [newProblemDescription, setNewProblemDescription] = useState('');
+    const [selectedProblemName, setSelectedProblemName] = useState('');
+    const [selectedUserName, setSelectedUserName] = useState('');
+    const [assignmentSuccess, setAssignmentSuccess] = useState(false);
+    const [assignmentError, setAssignmentError] = useState('');
+
 
     // Function to add a new event
     const addNewEvent = async () => {
@@ -56,14 +62,21 @@ function AdminPanel() {
                 return;
             }
     
+            // Add the new problem to the current event with teamLeaderId as an empty string and isActive as true
             const eventDocRef = doc(db, 'events', lastCreatedEvent.id);
             await updateDoc(eventDocRef, {
-                problems: arrayUnion({
-                    name: newProblemName,
-                    partipicant: [],
-                    poll: [],
-                    context: ''
-                }),
+                problems: [
+                    ...lastCreatedEvent.problems,
+                    {
+                        name: newProblemName,
+                        partipicant: [],
+                        poll: [],
+                        context: newProblemDescription,
+                        teamLeaderId: '',
+                        isActive: true,
+                        count: 0,
+                    },
+                ],
             });
     
             // Fetch updated events and set them in the state
@@ -74,12 +87,85 @@ function AdminPanel() {
             }));
             setEvents(updatedEventsData);
     
+            // Reset input values
+            setNewProblemName('');
+            setNewProblemDescription('');
+    
             console.log('New problem added to the last created event.');
         } catch (error) {
             console.error('Error adding new problem:', error);
         }
     };
-    
+
+    const handleAssignTeamLeader = async () => {
+        try {
+          // Validate that 'selectedProblemName' and 'selectedUserName' are not empty
+          if (!selectedProblemName || !selectedUserName) {
+            console.error('Invalid input: selectedProblemName and selectedUserName are required.');
+            return;
+          }
+      
+          // Find the chosen problem by name
+          const chosenProblemIndex = events.findIndex((event) =>
+            event.problems.some((problem) => problem.name === selectedProblemName)
+          );
+      
+          if (chosenProblemIndex !== -1) {
+            // Chosen problem exists, check if participants array exists
+            const chosenProblem = events[chosenProblemIndex].problems.find((problem) => problem.name === selectedProblemName);
+      
+            if (chosenProblem) {
+              // Find the chosen user by name
+              const chosenUser = chosenProblem.partipicant.find((participant) => participant.name === selectedUserName);
+      
+              if (chosenUser) {
+                // Update the teamLeaderId property inside the specified problem with the id of the chosen user
+                chosenProblem.teamLeaderId = chosenUser.id;
+      
+                // Update Firestore with the new team leader
+                const eventsCollection = collection(db, 'events');
+                const eventsSnapshot = await getDocs(eventsCollection);
+      
+                eventsSnapshot.forEach(async (doc) => {
+                  const eventData = doc.data();
+                  const eventProblems = eventData.problems || [];
+      
+                  // Update the chosen problem inside the problems array
+                  const updatedProblems = eventProblems.map((problem) =>
+                    problem.name === selectedProblemName ? chosenProblem : problem
+                  );
+      
+                  // Update Firestore with the new team leader
+                  await updateDoc(doc.ref, { problems: updatedProblems });
+                });
+            
+                // Set the success message
+                setAssignmentSuccess(true);
+
+                // Clear the success message after a few seconds
+                setTimeout(() => {
+                    setAssignmentSuccess(false);
+                    setAssignmentError('');
+                }, 1000);
+              }else{
+                setAssignmentError('User not found in the selected problem.');
+                setTimeout(() => {
+                    setAssignmentError('');
+                }, 1000);
+            }
+            }
+          }else {
+            setAssignmentError('Problem not found.');
+            setTimeout(() => {
+                setAssignmentError('');
+            }, 1000);
+        }
+        } catch (error) {
+          console.error('Error updating Firestore:', error);
+          setAssignmentError('An error occurred while updating Firestore.');
+        }
+      };
+      
 
     useEffect(() => {
         const unsubscribe = onAuthStateChanged(auth, (user) => {
@@ -99,20 +185,30 @@ function AdminPanel() {
           try {
             const eventsCollection = collection(db, 'events');
             const eventsSnapshot = await getDocs(eventsCollection);
-    
+      
             const eventsData = eventsSnapshot.docs.map((doc) => ({
               id: doc.id,
               ...doc.data(),
             }));
-    
+      
             setEvents(eventsData);
           } catch (error) {
             console.error('Error fetching events:', error);
           }
         };
-    
+      
+        // Fetch events initially
         fetchEvents();
-    }, []);
+      
+        // Fetch events every 5 seconds
+        const intervalId = setInterval(() => {
+          fetchEvents();
+        }, 60000);
+      
+        // Cleanup the interval on component unmount
+        return () => clearInterval(intervalId);
+      }, []);
+      
 
     const handleSignOut = async () => {
         try {
@@ -135,17 +231,20 @@ function AdminPanel() {
 
         <div className="flex justify-center items-start relative mt-3">
             {/* Left Panel */}
-            <div className="w-[293px] h-[695px] bg-zinc-300 p-10 mr-10 overflow-y-auto">
+            <div className="w-[293px] h-[695px] bg-zinc-300 p-4 mr-10 overflow-y-auto">
+            <div className="flex justify-center items-center">
+                <h2 className="text-lg font-bold text-red-950">Eventler</h2>
+            </div>
             {/* Render events */}
             {events.map((event) => (
                 <div key={event.id} className="mb-4">
-                <h2 className="text-lg font-bold">{event.name}</h2>
+                <h2 className="text-md font-semibold text-red-950">{event.name}</h2>
 
                 {/* Render problems inside the event */}
                 <div className="ml-4">
                     {event.problems.map((problem) => (
                     <div key={problem.name} className="mb-2">
-                        <h3 className="text-md font-semibold">{problem.name}</h3>
+                        <h3 className="text-md ">{problem.name}</h3>
                         {/* Display participant names */}
                         <p>
                         <strong>Katılımcılar:</strong>{' '}
@@ -187,8 +286,9 @@ function AdminPanel() {
                         className="border p-2 rounded"
                     />
                     <button
-                        className="bg-green-500 text-white py-2 px-4 rounded hover:bg-green-600 ml-2"
+                        className="bg-red-950 bg-opacity-95 text-white py-2 px-4 rounded hover:bg-red-950 ml-2"
                         onClick={addNewEvent}
+                        disabled={!newEventName.trim()} // Disable if the input is empty or contains only whitespace
                     >
                         Add New Event
                     </button>
@@ -206,31 +306,93 @@ function AdminPanel() {
                                 placeholder="Enter new problem name"
                                 value={newProblemName}
                                 onChange={(e) => setNewProblemName(e.target.value)}
-                                className="border p-2 rounded"
+                                className="border p-2 rounded mr-2"
+                            />
+                            <input
+                                type="text"
+                                placeholder="Enter problem description"
+                                value={newProblemDescription}
+                                onChange={(e) => setNewProblemDescription(e.target.value)}
+                                className="border p-2 rounded mr-2"
                             />
                             <button
-                                className="bg-blue-500 text-white py-2 px-4 rounded hover:bg-blue-600 ml-2"
+                                className="bg-red-950 bg-opacity-95 text-white py-2 px-4 rounded hover:bg-red-950 "
                                 onClick={addNewProblem}
+                                disabled={!newProblemName.trim() || !newProblemDescription.trim()}
                             >
                                 Add New Problem
                             </button>
                         </div>
+
                     </div>
                 )}
             </div>
 
             {/* Right Panel */}
             <div className="flex flex-col justify-between w-[470px] h-[695px] bg-zinc-300 p-4 ml-10 overflow-y-auto">
-            {/* Add your content for the right panel here */}
-            <div>
-                Right Panel
-            </div>
-            <div className="mt-4">
-                {/* Button for Right Panel */}
-                <button className="bg-red-950 bg-opacity-95 text-white py-2 px-4 rounded hover:bg-red-950">
-                Right Button
-                </button>
-            </div>
+                <div>
+                <div className="flex justify-center items-center">
+                    <h2 className="text-lg font-bold text-red-950">Aktif Problemler</h2>
+                </div>
+                    {/* Display active problems and their participant lists */}
+                    {events.map((event) => (
+                        <div key={event.id} className="mb-4">
+                            <h3 className="text-md font-semibold text-red-950">{event.name}</h3>
+                            <div className="ml-4">
+                                {event.problems
+                                    .filter((problem) => problem.isActive)
+                                    .map((activeProblem) => (
+                                        <div key={activeProblem.name} className="mb-2">
+                                            <p>
+                                                <strong>Problem Name:</strong> {activeProblem.name}
+                                            </p>
+                                            {/* Display participant names */}
+                                            <p>
+                                                <strong>Participants:</strong>{' '}
+                                                {activeProblem.partipicant?.map((participant) => participant.name).join(', ')}
+                                            </p>
+                                        </div>
+                                    ))}
+                            </div>
+                        </div>
+                    ))}
+
+                </div>
+                <div className="mt-4">
+                    {/* Button for Right Panel */}
+                    <div>
+                        <input
+                            type="text"
+                            placeholder="Enter problem name"
+                            value={selectedProblemName}
+                            onChange={(e) => setSelectedProblemName(e.target.value)}
+                            className="border p-2 rounded"
+                        />
+                        <input
+                            type="text"
+                            placeholder="Enter user name"
+                            value={selectedUserName}
+                            onChange={(e) => setSelectedUserName(e.target.value)}
+                            className="border p-2 rounded"
+                        />
+                        <button
+                            className={`bg-red-950 bg-opacity-95 text-white py-2 px-4 rounded hover:bg-red-950`}
+                            onClick={handleAssignTeamLeader}
+                            disabled={!selectedProblemName.trim() || !selectedUserName.trim()}
+                        >
+                            Assign Team Leader
+                        </button>
+                        {/* Success message */}
+                        {assignmentSuccess && (
+                            <p className="text-red-500 font-sans-serif">Team leader assigned successfully!</p>
+                        )}
+                        {assignmentError && (
+                            <p className="text-red-500 font-sans-serif">
+                            {assignmentError}
+                            </p>
+                        )}
+                        </div>
+                </div>
             </div>
         </div>
         </div>

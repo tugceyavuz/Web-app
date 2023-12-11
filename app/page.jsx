@@ -69,6 +69,8 @@ const Home = () => {
   
       // Create a UUID for the user
       const userId = uuidv4();
+      localStorage.setItem('userId', userId);
+      localStorage.setItem('selectedProblem', selectedProblem);
   
       // Update Firestore to add the user to the chosen problem's participants array
       const eventsCollection = collection(db, 'events');
@@ -96,7 +98,14 @@ const Home = () => {
           // Update the participants array inside the specified problem
           updatedProblems[chosenProblemIndex] = {
             ...chosenProblem,
-            partipicant: [...chosenProblem.partipicant, { id: userId, name: isim }],
+            partipicant: [
+              ...chosenProblem.partipicant,
+              {
+                id: userId,
+                name: isim,
+                pages: [{ name: isim, textVal: '' }],
+              },
+            ],
           };
   
           // Update Firestore with the new participant
