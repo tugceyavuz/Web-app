@@ -4,7 +4,9 @@ import {app} from '/firebase/config';
 import { getAuth, onAuthStateChanged } from "firebase/auth";
 import { useState, useEffect } from 'react';
 import { addDoc, collection, updateDoc, getDocs, doc, getDoc,arrayUnion } from 'firebase/firestore';
+import { set, ref, push, update, getDatabase, get, setDoc, onValue } from 'firebase/database';
 import { db } from '/firebase/config';
+import { v4 as uuidv4 } from 'uuid';
 
 const auth = getAuth(app);
 import { useRouter } from 'next/navigation';
@@ -20,6 +22,7 @@ function AdminPanel() {
     const [selectedUserName, setSelectedUserName] = useState('');
     const [assignmentSuccess, setAssignmentSuccess] = useState(false);
     const [assignmentError, setAssignmentError] = useState('');
+    const [problemId, setProblemId] = useState('');
 
 
     // Function to add a new event
@@ -55,7 +58,7 @@ function AdminPanel() {
         }
     };
     // Function to add a new problem to the last created event
-    const addNewProblem = async () => {
+    const addNewProblemFS = async (problemId) => {
         try {
             if (!lastCreatedEvent) {
                 console.error('No recent event available to add a problem to.');
@@ -65,18 +68,16 @@ function AdminPanel() {
             // Add the new problem to the current event with teamLeaderId as an empty string and isActive as true
             const eventDocRef = doc(db, 'events', lastCreatedEvent.id);
             await updateDoc(eventDocRef, {
-                problems: [
-                    ...lastCreatedEvent.problems,
-                    {
-                        name: newProblemName,
-                        partipicant: [],
-                        poll: [],
-                        context: newProblemDescription,
-                        teamLeaderId: '',
-                        isActive: true,
-                        count: 0,
-                    },
-                ],
+                problems: arrayUnion({
+                    id: problemId,
+                    name: newProblemName,
+                    partipicant: [],
+                    poll: [],
+                    context: newProblemDescription,
+                    teamLeaderId: '',
+                    isActive: true,
+                    count: 0,
+                }),
             });
     
             // Fetch updated events and set them in the state
@@ -91,11 +92,63 @@ function AdminPanel() {
             setNewProblemName('');
             setNewProblemDescription('');
     
-            console.log('New problem added to the last created event.');
+            console.log('New problem added to the last created event (Firestore).');
         } catch (error) {
-            console.error('Error adding new problem:', error);
+            console.error('Error adding new problem (Firestore):', error);
         }
     };
+        
+      const addNewProblemRD = async (problemId) => {
+        try {
+          // Get a reference to the Firebase Realtime Database
+          const db = getDatabase();
+      
+          // Reference to the new problem node under the root
+          const newProblemRef = ref(db, problemId);
+      
+          // Data for the new problem
+          const newProblemData = {
+            preCount: 0,
+            preuserCount: 0,
+            userCount: 0,
+            id: problemId,
+            name: newProblemName,
+            count: 0,
+          };
+      
+          // Set the data for the new problem under the specified problemId
+          await set(newProblemRef, newProblemData);
+      
+          // Fetch updated problems and set them in the state
+          const updatedProblemsSnapshot = await get(ref(db));
+          const updatedProblemsData = [];
+      
+          updatedProblemsSnapshot.forEach((childSnapshot) => {
+            const problemData = {
+              id: childSnapshot.key,
+              ...childSnapshot.val(),
+            };
+      
+            updatedProblemsData.push(problemData);
+          });
+    
+          // Reset input values
+          setNewProblemName('');
+          setNewProblemDescription('');
+      
+          console.log('New problem added to the Realtime Database.');
+        } catch (error) {
+          console.error('Error adding new problem (Realtime Database):', error);
+        }
+      };
+       
+      const handleAddNewProblem = () => {
+        const newProblemId = uuidv4();
+        addNewProblemFS(newProblemId);
+        addNewProblemRD(newProblemId);
+      };
+      
+      
 
     const handleAssignTeamLeader = async () => {
         try {
@@ -180,7 +233,6 @@ function AdminPanel() {
       }, [router]);
 
     // Fetch events and set them in the state
-    useEffect(() => {
         const fetchEvents = async () => {
           try {
             const eventsCollection = collection(db, 'events');
@@ -198,17 +250,30 @@ function AdminPanel() {
         };
       
         // Fetch events initially
-        fetchEvents();
-      
-        // Fetch events every 5 seconds
-        const intervalId = setInterval(() => {
+    fetchEvents();
+
+    const rb = getDatabase();
+    const problemsRef = ref(rb);
+    const [previousUserCount, setPreviousUserCount] = useState(null);
+    
+    useEffect(() => {
+      const unsubscribe = onValue(problemsRef, (snapshot) => {
+        const data = snapshot.val();
+    
+        // Only trigger when the userCount changes
+        if (data && data.userCount !== previousUserCount) {
+          console.log('User count changed:', data.userCount);
+          setPreviousUserCount(data.userCount);
           fetchEvents();
-        }, 60000);
-      
-        // Cleanup the interval on component unmount
-        return () => clearInterval(intervalId);
-      }, []);
-      
+        }
+      });
+    
+      return () => {
+        // Cleanup the listener when the component unmounts
+        unsubscribe();
+      };
+    }, [problemsRef, previousUserCount]);
+    
 
     const handleSignOut = async () => {
         try {
@@ -248,7 +313,7 @@ function AdminPanel() {
                         {/* Display participant names */}
                         <p>
                         <strong>Katılımcılar:</strong>{' '}
-                        {problem.partipicant.map((partipicant) => partipicant.name).join(', ')}
+                        {problem.partipicant?.map((partipicant) => partipicant.name).join(', ')}
                         </p>
 
                         {/* Display poll array */}
@@ -317,7 +382,7 @@ function AdminPanel() {
                             />
                             <button
                                 className="bg-red-950 bg-opacity-95 text-white py-2 px-4 rounded hover:bg-red-950 "
-                                onClick={addNewProblem}
+                                onClick={handleAddNewProblem}
                                 disabled={!newProblemName.trim() || !newProblemDescription.trim()}
                             >
                                 Add New Problem

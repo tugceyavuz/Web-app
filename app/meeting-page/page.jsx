@@ -2,6 +2,7 @@
 import React from 'react';
 import { useState, useEffect } from 'react';
 import { addDoc, collection, updateDoc, getDocs, doc, getDoc,arrayUnion } from 'firebase/firestore';
+import { set, ref, push, update, getDatabase, get, setDoc, onValue } from 'firebase/database';
 import { db } from '/firebase/config';
 
 function Meeting() {
@@ -12,7 +13,9 @@ function Meeting() {
     setInputText(e.target.value);
   };
 
-  const handleDisplayText = async () => {
+  
+
+  const handleDisplayText = async (displayCount) => {
     try {
       // Retrieve the user ID from localStorage
       const storedUserId = localStorage.getItem('userId');
@@ -41,8 +44,6 @@ function Meeting() {
             // Assuming 'pages' is an array inside 'partipicant'
             const pagesData = participantData.pages || [];
   
-            // Get the count from the chosen problem
-            const displayCount = chosenProblem.count; // Default to 3 if count is not available
             console.log('displayCount', displayCount);
   
             // Display information about the user and pages up to the specified count
@@ -69,11 +70,29 @@ function Meeting() {
       console.error('Error retrieving data from Firestore:', error);
     }
   };
-  
+
+  const rb = getDatabase();
+  const problemsRef = ref(rb);
+  const [previousCount, setPreviousCount] = useState(null);
+    
   useEffect(() => {
-    // Call handleDisplayText when the component mounts
-    handleDisplayText();
-  }, []);
+    const unsubscribe = onValue(problemsRef, (snapshot) => {
+    const data = snapshot.val();
+    
+    // Only trigger when the userCount changes
+    if (data && data.count !== previousCount) {
+        console.log('User count changed:', data.count);
+        setPreviousCount(data.count);
+        handleDisplayText(data.count);
+      }
+    });
+    
+    return () => {
+    // Cleanup the listener when the component unmounts
+      unsubscribe();
+    };
+  }, [problemsRef, previousCount]);
+
 
   return (
     <div className="flex flex-col items-center justify-center h-screen">

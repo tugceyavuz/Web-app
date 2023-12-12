@@ -22,7 +22,7 @@ function Page() {
     if (signInError) {
       // Set the error state with the error message
       setError('Username or password is incorrect.');
-      console.error(signInError);
+      console.error(signInError); 
       return;
     }
 

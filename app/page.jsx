@@ -3,6 +3,7 @@ import { useState, useEffect } from 'react';
 import { db } from '@/firebase/config';
 import { collection, getDocs  } from 'firebase/firestore';
 import { updateDoc } from 'firebase/firestore'
+import { set, ref, push, update, getDatabase, get, setDoc } from 'firebase/database';
 import { useRouter } from 'next/navigation';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -110,6 +111,8 @@ const Home = () => {
   
           // Update Firestore with the new participant
           updateDoc(doc.ref, { problems: updatedProblems });
+
+          increaseUserCount(chosenProblem);
   
           // Redirect the user to the meeting page
           router.push('/meeting-page');
@@ -119,6 +122,29 @@ const Home = () => {
       console.error('Error updating Firestore:', error);
     }
   };
+
+  const increaseUserCount = async (problem) => {
+    try {
+      const size = problem.partipicant.length + 1;
+      console.log(`User count for problem ${problem.id}: ${size}`);
+      const id = problem.id;
+  
+      const db = getDatabase();
+      const problemRef = ref(db, id);
+
+  
+      // Update the userCount value for the specified problem
+      await update(problemRef, {
+        preuserCount: size - 1,
+        userCount: size,
+      });
+  
+      console.log(`User count updated for problem ${id}: ${size}`);
+    } catch (error) {
+      console.error('Error updating user count:', error);
+    }
+  };
+  
   
   
 
