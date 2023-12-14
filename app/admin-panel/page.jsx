@@ -106,13 +106,14 @@ function AdminPanel() {
       
           // Data for the new problem
           const newProblemData = {
+            isActive: true,
+            eventID: lastCreatedEvent.id,
             teamLeaderId: '',
             userCount: 0,
             id: problemId,
             name: newProblemName,
             count: 0,
-          };
-        
+          };      
       
           // Set the data for the new problem under the specified problemId
           await set(newProblemRef, newProblemData);
@@ -255,13 +256,12 @@ function AdminPanel() {
         fetchEvents();
     }, []);
       
-        // Fetch events initially
-   //;
 
    const rb = getDatabase();
    // Point the reference to the root
    const rootRef = ref(rb);
    const [userCounts, setUserCounts] = useState({});
+   const [isAvtives, setIsAvtives] = useState({});
  
    useEffect(() => {
      const unsubscribe = onValue(rootRef, (snapshot) => {
@@ -292,8 +292,10 @@ function AdminPanel() {
        unsubscribe();
      };
    }, [rootRef, userCounts]);
-    
+         
+   useEffect(() => {
         
+    }, [isAvtives]);
 
     const handleSignOut = async () => {
         try {
