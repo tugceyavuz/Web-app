@@ -3,15 +3,18 @@ import React from 'react';
 import { useState, useEffect } from 'react';
 import { addDoc, collection, updateDoc, getDocs, doc, getDoc,arrayUnion } from 'firebase/firestore';
 import { set, ref, push, update, getDatabase, get, setDoc, onValue } from 'firebase/database';
+import { useRouter } from 'next/navigation';
 import { db } from '/firebase/config';
 
 function Meeting() {
+  const router = useRouter();
   const [displayText, setDisplayText] = useState('');
   const [inputText, setInputText] = useState('');
   const [userId, setUserId] = useState('');
   const [selectedProblem, setSelectedProblem] = useState('');
   const [eventId, setEventId] = useState('');
   const [count, setCount] = useState(0);
+  const [teamLeaderId, setTeamLeaderId] = useState('');
 
   const handleInputChange = (e) => {
     setInputText(e.target.value);
@@ -78,6 +81,38 @@ function Meeting() {
     }
   };
 
+  async function updateTL() {
+    if(selectedProblem)
+      {
+        const rb = getDatabase();
+        const Ref = ref(rb, selectedProblem);
+        const unsubscribe = onValue(Ref, (snapshot) => {
+        const data = snapshot.val();
+ 
+        // Ensure data exists
+        if (data !== null) {
+
+          const newTL = data.teamLeaderId;
+          // Only trigger when any count changes
+          if (newTL !== teamLeaderId && newTL == userId) {
+            console.log('teamLeaderId changed:', newTL);
+            setTeamLeaderId(newTL);  
+            router.push('/TL-meeting');
+          }
+        }
+        });
+ 
+        return () => {
+          // Cleanup the listener when the component unmounts
+          unsubscribe();
+        };
+      }
+  }
+
+  useEffect(() => {  
+    updateTL();
+  }, [teamLeaderId, selectedProblem]);
+
 
   async function updateCount() {
     if(selectedProblem)
@@ -89,7 +124,7 @@ function Meeting() {
  
         // Ensure data exists
         if (data !== null) {
-          // Iterate through each problem and update count
+
           const newCount = data.count;
           // Only trigger when any count changes
           if (newCount !== count) {
