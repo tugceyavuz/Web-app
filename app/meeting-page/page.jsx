@@ -8,47 +8,54 @@ import { db } from '/firebase/config';
 function Meeting() {
   const [displayText, setDisplayText] = useState('');
   const [inputText, setInputText] = useState('');
+  const [userId, setUserId] = useState('');
+  const [selectedProblem, setSelectedProblem] = useState('');
+  const [eventId, setEventId] = useState('');
+  const [count, setCount] = useState(0);
 
   const handleInputChange = (e) => {
     setInputText(e.target.value);
   };
 
-  
+  async function fetchUrl() {
+    setUserId(localStorage.getItem('userId'));
+    setSelectedProblem(localStorage.getItem('selectedProblem'));
+    setEventId(localStorage.getItem('eventId'));
+  }
+ 
+  useEffect(() => {
+    fetchUrl();
+  }, []);
 
-  const handleDisplayText = async (displayCount) => {
+  const handleDisplayText = async (Count) => {
     try {
-      // Retrieve the user ID from localStorage
-      const storedUserId = localStorage.getItem('userId');
-      const selectedProblem = localStorage.getItem('selectedProblem');
-  
-      if (!storedUserId || !selectedProblem) {
+
+      if (!userId || !selectedProblem) {
         console.error('User ID or selected problem not found in localStorage.');
         return;
       }
   
-      const eventsCollection = collection(db, 'events');
-      const eventsSnapshot = await getDocs(eventsCollection);
+      if (!userId || !selectedProblem) {
+        console.error('User ID or selected problem not found in localStorage.');
+        return;
+      }
   
-      eventsSnapshot.forEach((doc) => {
-        const eventData = doc.data();
-        const eventProblems = eventData.problems || [];
+      const docRef = doc(db, 'events', eventId);
+      const eventSnapshot = await getDoc(docRef);
   
-        // Find the chosen problem by name
-        const chosenProblem = eventProblems.find((problem) => problem.name === selectedProblem);
-        
-        if (chosenProblem) {
+      eventSnapshot.data().problems.forEach((item) => {
+
+        if (item.id == selectedProblem) {
           // Check if participants array exists
-          const participantData = chosenProblem.partipicant.find((participant) => participant.id === storedUserId);
+          const participantData = item.partipicant.find((participant) => participant.id === userId);
   
           if (participantData) {
             // Assuming 'pages' is an array inside 'partipicant'
             const pagesData = participantData.pages || [];
-  
-            console.log('displayCount', displayCount);
-  
+
             // Display information about the user and pages up to the specified count
             const displayText = pagesData
-                .slice(0, displayCount)
+                .slice(0, Count)
                 .map((page, index) => (
                   <li key={index}>
                     <strong>Name:</strong> {page.name} <br />
@@ -71,27 +78,38 @@ function Meeting() {
     }
   };
 
-  const rb = getDatabase();
-  const problemsRef = ref(rb);
-  const [previousCount, setPreviousCount] = useState(null);
-    
-  useEffect(() => {
-    const unsubscribe = onValue(problemsRef, (snapshot) => {
-    const data = snapshot.val();
-    
-    // Only trigger when the userCount changes
-    if (data && data.count !== previousCount) {
-        console.log('User count changed:', data.count);
-        setPreviousCount(data.count);
-        handleDisplayText(data.count);
+
+  async function updateCount() {
+    if(selectedProblem)
+      {
+        const rb = getDatabase();
+        const Ref = ref(rb, selectedProblem);
+        const unsubscribe = onValue(Ref, (snapshot) => {
+        const data = snapshot.val();
+ 
+        // Ensure data exists
+        if (data !== null) {
+          // Iterate through each problem and update count
+          const newCount = data.count;
+          // Only trigger when any count changes
+          if (newCount !== count) {
+            console.log('Count changed:', newCount);
+            setCount(newCount);  
+            handleDisplayText(newCount);
+          }
+        }
+        });
+ 
+        return () => {
+          // Cleanup the listener when the component unmounts
+          unsubscribe();
+        };
       }
-    });
-    
-    return () => {
-    // Cleanup the listener when the component unmounts
-      unsubscribe();
-    };
-  }, [problemsRef, previousCount]);
+  }
+
+  useEffect(() => {  
+    updateCount();
+  }, [count, selectedProblem]);
 
 
   return (

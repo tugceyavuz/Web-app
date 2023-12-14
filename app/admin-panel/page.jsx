@@ -22,8 +22,6 @@ function AdminPanel() {
     const [selectedUserName, setSelectedUserName] = useState('');
     const [assignmentSuccess, setAssignmentSuccess] = useState(false);
     const [assignmentError, setAssignmentError] = useState('');
-    const [problemId, setProblemId] = useState('');
-
 
     // Function to add a new event
     const addNewEvent = async () => {
@@ -98,7 +96,7 @@ function AdminPanel() {
         }
     };
         
-      const addNewProblemRD = async (problemId) => {
+    const addNewProblemRD = async (problemId) => {
         try {
           // Get a reference to the Firebase Realtime Database
           const db = getDatabase();
@@ -108,13 +106,13 @@ function AdminPanel() {
       
           // Data for the new problem
           const newProblemData = {
-            preCount: 0,
-            preuserCount: 0,
+            teamLeaderId: '',
             userCount: 0,
             id: problemId,
             name: newProblemName,
             count: 0,
           };
+        
       
           // Set the data for the new problem under the specified problemId
           await set(newProblemRef, newProblemData);
@@ -140,15 +138,13 @@ function AdminPanel() {
         } catch (error) {
           console.error('Error adding new problem (Realtime Database):', error);
         }
-      };
+    };
        
-      const handleAddNewProblem = () => {
+    const handleAddNewProblem = () => {
         const newProblemId = uuidv4();
         addNewProblemFS(newProblemId);
         addNewProblemRD(newProblemId);
-      };
-      
-      
+    };        
 
     const handleAssignTeamLeader = async () => {
         try {
@@ -174,7 +170,17 @@ function AdminPanel() {
               if (chosenUser) {
                 // Update the teamLeaderId property inside the specified problem with the id of the chosen user
                 chosenProblem.teamLeaderId = chosenUser.id;
-      
+
+                const rb = getDatabase();
+
+                // Reference to the new problem node under the root
+                const newProblemRef = ref(rb, chosenProblem.id);
+
+                // Update only the teamLeaderId property of the existing chosenProblem
+                update(newProblemRef, {
+                ['teamLeaderId']: chosenUser.id,
+                });
+                    
                 // Update Firestore with the new team leader
                 const eventsCollection = collection(db, 'events');
                 const eventsSnapshot = await getDocs(eventsCollection);
@@ -208,16 +214,13 @@ function AdminPanel() {
             }
             }
           }else {
-            setAssignmentError('Problem not found.');
-            setTimeout(() => {
-                setAssignmentError('');
-            }, 1000);
+            alert('Problem not found.');
         }
         } catch (error) {
           console.error('Error updating Firestore:', error);
-          setAssignmentError('An error occurred while updating Firestore.');
+          alert('An error occurred while updating Firestore.');
         }
-      };
+    };
       
 
     useEffect(() => {
@@ -233,7 +236,7 @@ function AdminPanel() {
       }, [router]);
 
     // Fetch events and set them in the state
-        const fetchEvents = async () => {
+    const fetchEvents = async () => {
           try {
             const eventsCollection = collection(db, 'events');
             const eventsSnapshot = await getDocs(eventsCollection);
@@ -242,38 +245,55 @@ function AdminPanel() {
               id: doc.id,
               ...doc.data(),
             }));
-      
             setEvents(eventsData);
           } catch (error) {
             console.error('Error fetching events:', error);
           }
-        };
+    };
+
+    useEffect(() => {
+        fetchEvents();
+    }, []);
       
         // Fetch events initially
-    fetchEvents();
+   //;
 
-    const rb = getDatabase();
-    const problemsRef = ref(rb);
-    const [previousUserCount, setPreviousUserCount] = useState(null);
+   const rb = getDatabase();
+   // Point the reference to the root
+   const rootRef = ref(rb);
+   const [userCounts, setUserCounts] = useState({});
+ 
+   useEffect(() => {
+     const unsubscribe = onValue(rootRef, (snapshot) => {
+       const data = snapshot.val();
+ 
+       // Ensure data exists
+       if (data !== null) {
+         // Iterate through each problem and update userCounts
+         const newUserCounts = {};
+         Object.keys(data).forEach((problemKey) => {
+           const userCount = data[problemKey]?.userCount;
+           if (userCount !== undefined) {
+             newUserCounts[problemKey] = userCount;
+           }
+         });
+ 
+         // Only trigger when any userCount changes
+         if (JSON.stringify(newUserCounts) !== JSON.stringify(userCounts)) {
+           console.log('User counts changed:', newUserCounts);
+           setUserCounts(newUserCounts);
+           fetchEvents();
+         }
+       }
+     });
+ 
+     return () => {
+       // Cleanup the listener when the component unmounts
+       unsubscribe();
+     };
+   }, [rootRef, userCounts]);
     
-    useEffect(() => {
-      const unsubscribe = onValue(problemsRef, (snapshot) => {
-        const data = snapshot.val();
-    
-        // Only trigger when the userCount changes
-        if (data && data.userCount !== previousUserCount) {
-          console.log('User count changed:', data.userCount);
-          setPreviousUserCount(data.userCount);
-          fetchEvents();
-        }
-      });
-    
-      return () => {
-        // Cleanup the listener when the component unmounts
-        unsubscribe();
-      };
-    }, [problemsRef, previousUserCount]);
-    
+        
 
     const handleSignOut = async () => {
         try {

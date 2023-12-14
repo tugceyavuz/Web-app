@@ -71,7 +71,6 @@ const Home = () => {
       // Create a UUID for the user
       const userId = uuidv4();
       localStorage.setItem('userId', userId);
-      localStorage.setItem('selectedProblem', selectedProblem);
   
       // Update Firestore to add the user to the chosen problem's participants array
       const eventsCollection = collection(db, 'events');
@@ -87,7 +86,10 @@ const Home = () => {
         if (chosenProblemIndex !== -1) {
           // Chosen problem exists, check if participants array exists
           const chosenProblem = eventProblems[chosenProblemIndex];
-  
+          const eventId = doc.id;
+          localStorage.setItem('eventId', eventId);
+          localStorage.setItem('selectedProblem', chosenProblem.id);
+          
           // Create participants array if it doesn't exist
           if (!chosenProblem.hasOwnProperty('partipicant')) {
             chosenProblem.partipicant = [];
@@ -126,16 +128,12 @@ const Home = () => {
   const increaseUserCount = async (problem) => {
     try {
       const size = problem.partipicant.length + 1;
-      console.log(`User count for problem ${problem.id}: ${size}`);
       const id = problem.id;
   
       const db = getDatabase();
       const problemRef = ref(db, id);
-
-  
       // Update the userCount value for the specified problem
       await update(problemRef, {
-        preuserCount: size - 1,
         userCount: size,
       });
   
