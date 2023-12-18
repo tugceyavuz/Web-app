@@ -22,6 +22,7 @@ function AdminPanel() {
     const [selectedUserName, setSelectedUserName] = useState('');
     const [assignmentSuccess, setAssignmentSuccess] = useState(false);
     const [assignmentError, setAssignmentError] = useState('');
+    const [userCounts, setUserCounts] = useState({});
 
     // Function to add a new event
     const addNewEvent = async () => {
@@ -257,42 +258,41 @@ function AdminPanel() {
         fetchEvents();
     }, []);
       
-
-   const rb = getDatabase();
-   // Point the reference to the root
-   const rootRef = ref(rb);
-   const [userCounts, setUserCounts] = useState({});
  
-   const handleUserCountsChange = (snapshot) => {
-    const data = snapshot.val();
-  
-    // Ensure data exists
-    if (data !== null) {
-      // Iterate through each problem and update userCounts
-      const newUserCounts = {};
-      Object.keys(data).forEach((problemKey) => {
-        const userCount = data[problemKey]?.userCount;
-        if (userCount !== undefined) {
-          newUserCounts[problemKey] = userCount;
+    const handleUserCountsChange = (snapshot) => { 
+        const data = snapshot.val();
+        // Ensure data exists
+        if (data !== null) {
+          // Iterate through each problem and update userCounts
+          const newUserCounts = {};
+          Object.keys(data).forEach((problemKey) => {
+            const userCount = data[problemKey]?.userCount;
+            if (userCount !== undefined) {
+              newUserCounts[problemKey] = userCount;
+            }
+          });
+      
+          // Only trigger when any userCount changes
+          if (Object.keys(newUserCounts).length > 0 && JSON.stringify(newUserCounts) !== JSON.stringify(userCounts)) {
+            console.log('User counts changed:', newUserCounts);
+            setUserCounts(newUserCounts);
+            setTimeout(() => {
+                fetchEvents();
+              }, 100);
+          }
         }
-      });
-  
-      // Only trigger when any userCount changes
-      if (JSON.stringify(newUserCounts) !== JSON.stringify(userCounts)) {
-        console.log('User counts changed:', newUserCounts);
-        setUserCounts(newUserCounts);
-        fetchEvents();
-      }
-    }
-  };
-  
-  useEffect(() => {
-    const unsubscribe = onValue(rootRef, handleUserCountsChange);
-    return () => {
-      // Cleanup the listener when the component unmounts
-      unsubscribe();
     };
-  }, [rootRef]);
+      
+    useEffect(() => {
+        const rb = getDatabase();
+        // Point the reference to the root
+        const rootRef = ref(rb); 
+        const unsubscribe = onValue(rootRef, handleUserCountsChange);
+        return () => {
+          // Cleanup the listener when the component unmounts
+          unsubscribe();
+        };
+    }, [userCounts]);
 
          
 

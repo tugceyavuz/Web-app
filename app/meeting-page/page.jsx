@@ -245,8 +245,7 @@ function Meeting() {
 
         {/* Button to update display text */}
         <button
-          className="bg-blue-500 text-white py-1 px-4 rounded hover:bg-blue-600 ml-2"
-          onClick={handleDisplayText}
+          className="bg-red-950 bg-opacity-95 text-white py-1 px-4 rounded hover:bg-red-950 ml-2"
           disabled={!inputText.trim()}
         >
           Save

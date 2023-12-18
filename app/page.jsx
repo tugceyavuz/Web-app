@@ -3,7 +3,7 @@ import { useState, useEffect } from 'react';
 import { db } from '@/firebase/config';
 import { collection, getDocs  } from 'firebase/firestore';
 import { updateDoc } from 'firebase/firestore'
-import { set, ref, push, update, getDatabase, get, setDoc } from 'firebase/database';
+import { set, ref, push, update, getDatabase, get, setDoc, onValue } from 'firebase/database';
 import { useRouter } from 'next/navigation';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -15,37 +15,39 @@ const Home = () => {
   const [isButtonDisabled, setIsButtonDisabled] = useState(true);
 
   useEffect(() => {
-    //get the list of problems from firestore
-    const fetchProblems = async () => {
-      try {
-        const eventsCollection = collection(db, 'events');
-        const eventsSnapshot = await getDocs(eventsCollection);
+    // Initialize Firebase Realtime Database
+    const rb = getDatabase();
+    const problemsRef = ref(rb); // Assuming your problems are stored under the 'problems' node
 
+    // Listen for changes in the problems node
+    const unsubscribe = onValue(problemsRef, (snapshot) => {
+      const data = snapshot.val();
+
+      if (data) {
         const problems = [];
 
-        eventsSnapshot.forEach((doc) => {
-          const eventData = doc.data();
-          const eventProblems = eventData.problems || [];
+        // Iterate through each problem in the data
+        Object.keys(data).forEach((problemKey) => {
+          const problem = data[problemKey];
 
-          // Iterate through each problem in the array
-          eventProblems.forEach((problem) => {
-            if(problem.isActive){  // Assuming each problem has a 'name' property
-              const problemName = problem.name;
-              
-              // Add the problem name to the problems array
-              problems.push(problemName);
-            }
-          });
+          // Check if the problem is active
+          if (problem.isActive) {
+            const problemName = problem.name; // Assuming each problem has a 'name' property
+
+            // Add the problem name to the problems array
+            problems.push(problemName);
+          }
         });
 
         // Set the problems array as the options
         setProblemOptions(problems);
-      } catch (error) {
-        console.error('Error fetching problems:', error);
       }
-    };
+    });
 
-    fetchProblems();
+    // Cleanup the listener when the component unmounts
+    return () => {
+      unsubscribe();
+    };
   }, []);// Empty dependency array means this effect runs once on mount
 
   const handleProblemChange = (event) => {
