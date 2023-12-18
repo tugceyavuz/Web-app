@@ -29,11 +29,12 @@ const Home = () => {
 
           // Iterate through each problem in the array
           eventProblems.forEach((problem) => {
-            // Assuming each problem has a 'name' property
-            const problemName = problem.name;
-            
-            // Add the problem name to the problems array
-            problems.push(problemName);
+            if(problem.isActive){  // Assuming each problem has a 'name' property
+              const problemName = problem.name;
+              
+              // Add the problem name to the problems array
+              problems.push(problemName);
+            }
           });
         });
 
@@ -142,9 +143,6 @@ const Home = () => {
       console.error('Error updating user count:', error);
     }
   };
-  
-  
-  
 
   return (
     <section className="w-full flex-center flex-col h-screen">  
@@ -157,7 +155,7 @@ const Home = () => {
           className="w-80 p-3 border rounded focus:outline-none"
         >
           <option value="" disabled hidden>
-            PROBLEMLER
+            PROBLEMS
           </option>
           {problemOptions.map((option, index) => (
             <option key={index} value={option}>
@@ -186,7 +184,7 @@ const Home = () => {
         onClick={handleJoinClick}
         disabled={isButtonDisabled}
       >
-        KATIL
+        JOIN
       </button>
     </section>
   );

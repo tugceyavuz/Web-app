@@ -106,6 +106,7 @@ function AdminPanel() {
       
           // Data for the new problem
           const newProblemData = {
+            isCountdownActive: false,
             isActive: true,
             eventID: lastCreatedEvent.id,
             teamLeaderId: '',
@@ -234,7 +235,7 @@ function AdminPanel() {
     
         // Clean up the subscription when the component is unmounted
         return () => unsubscribe();
-      }, [router]);
+    }, [router]);
 
     // Fetch events and set them in the state
     const fetchEvents = async () => {
@@ -261,41 +262,39 @@ function AdminPanel() {
    // Point the reference to the root
    const rootRef = ref(rb);
    const [userCounts, setUserCounts] = useState({});
-   const [isAvtives, setIsAvtives] = useState({});
  
-   useEffect(() => {
-     const unsubscribe = onValue(rootRef, (snapshot) => {
-       const data = snapshot.val();
- 
-       // Ensure data exists
-       if (data !== null) {
-         // Iterate through each problem and update userCounts
-         const newUserCounts = {};
-         Object.keys(data).forEach((problemKey) => {
-           const userCount = data[problemKey]?.userCount;
-           if (userCount !== undefined) {
-             newUserCounts[problemKey] = userCount;
-           }
-         });
- 
-         // Only trigger when any userCount changes
-         if (JSON.stringify(newUserCounts) !== JSON.stringify(userCounts)) {
-           console.log('User counts changed:', newUserCounts);
-           setUserCounts(newUserCounts);
-           fetchEvents();
-         }
-       }
-     });
- 
-     return () => {
-       // Cleanup the listener when the component unmounts
-       unsubscribe();
-     };
-   }, [rootRef, userCounts]);
+   const handleUserCountsChange = (snapshot) => {
+    const data = snapshot.val();
+  
+    // Ensure data exists
+    if (data !== null) {
+      // Iterate through each problem and update userCounts
+      const newUserCounts = {};
+      Object.keys(data).forEach((problemKey) => {
+        const userCount = data[problemKey]?.userCount;
+        if (userCount !== undefined) {
+          newUserCounts[problemKey] = userCount;
+        }
+      });
+  
+      // Only trigger when any userCount changes
+      if (JSON.stringify(newUserCounts) !== JSON.stringify(userCounts)) {
+        console.log('User counts changed:', newUserCounts);
+        setUserCounts(newUserCounts);
+        fetchEvents();
+      }
+    }
+  };
+  
+  useEffect(() => {
+    const unsubscribe = onValue(rootRef, handleUserCountsChange);
+    return () => {
+      // Cleanup the listener when the component unmounts
+      unsubscribe();
+    };
+  }, [rootRef]);
+
          
-   useEffect(() => {
-        
-    }, [isAvtives]);
 
     const handleSignOut = async () => {
         try {
@@ -313,16 +312,17 @@ function AdminPanel() {
         {/* Sign Out Button */}
         <button className="bg-red-950 bg-opacity-95 text-white hover:bg-red-950 btn relative btn-neutral flex h-9 w-20 items-center justify-center whitespace-nowrap rounded-lg border border-token-border-medium focus:ring-0"
             type="button" onClick={handleSignOut}>
-            ÇIKIŞ YAP
+            Sign Out
         </button>
 
         <div className="flex justify-center items-start relative mt-3">
             {/* Left Panel */}
-            <div className="w-[293px] h-[695px] bg-zinc-300 p-4 mr-10 overflow-y-auto">
+            <div className="w-[293px] bg-zinc-300 p-4 mr-10 relative overflow-hidden" style={{height: "calc(100vh - 60px)"}}>
             <div className="flex justify-center items-center">
-                <h2 className="text-lg font-bold text-red-950">Eventler</h2>
+                <h2 className="text-lg font-bold text-red-950 absolute w-full bg-zinc-300 text-center">Events</h2>
             </div>
             {/* Render events */}
+            <div className="h-full overflow-y-auto mt-5 pb-10">
             {events.map((event) => (
                 <div key={event.id} className="mb-4">
                 <h2 className="text-md font-semibold text-red-950">{event.name}</h2>
@@ -334,13 +334,13 @@ function AdminPanel() {
                         <h3 className="text-md ">{problem.name}</h3>
                         {/* Display participant names */}
                         <p>
-                        <strong>Katılımcılar:</strong>{' '}
+                        <strong>Participants:</strong>{' '}
                         {problem.partipicant?.map((partipicant) => partipicant.name).join(', ')}
                         </p>
 
                         {/* Display poll array */}
                         <p>
-                        <strong>Oylama Sonucu:</strong>{' '}
+                        <strong>Poll Results:</strong>{' '}
                         <br />
                         {problem.poll?.map((poll, index) => (
                             <span key={index}>
@@ -352,17 +352,18 @@ function AdminPanel() {
                         </p>
                         {/* Display context */}
                         <p>
-                        <strong>İçerik:</strong> {problem.context}
+                        <strong>Context:</strong> {problem.context}
                         </p>
                     </div>
                     ))}
                 </div>
                 </div>
             ))}
+                </div>
             </div>
 
             {/* Main Content */}
-            <div className="flex flex-col justify-between w-[444px] h-[695px] bg-white p-4 mx-10 overflow-y-auto">
+            <div className="flex flex-col justify-between w-[444px] bg-white p-4 mx-10 " style={{height: "calc(100vh - 60px)"}}>
                 {/* Button to add a new event */}
                 <div className="mt-4">
                     <input
@@ -416,11 +417,12 @@ function AdminPanel() {
             </div>
 
             {/* Right Panel */}
-            <div className="flex flex-col justify-between w-[470px] h-[695px] bg-zinc-300 p-4 ml-10 overflow-y-auto">
+            <div className="flex flex-col justify-between w-[470px] bg-zinc-300 p-4 ml-10 relative overflow-y-auto" style={{height: "calc(100vh - 60px)"}}>
                 <div>
-                <div className="flex justify-center items-center">
-                    <h2 className="text-lg font-bold text-red-950">Aktif Problemler</h2>
-                </div>
+                    <div className="flex justify-center items-center">
+                        <h2 className="text-lg font-bold text-red-950 absolute w-full bg-zinc-300 text-center">Active Problems</h2>
+                    </div>
+                    <div className='h-[600px] overflow-y-auto mt-5 pb-10'>
                     {/* Display active problems and their participant lists */}
                     {events.map((event) => (
                         <div key={event.id} className="mb-4">
@@ -443,9 +445,9 @@ function AdminPanel() {
                             </div>
                         </div>
                     ))}
-
+                    </div>
                 </div>
-                <div className="mt-4">
+                <div className="mt-4 absolute bottom-0">
                     {/* Button for Right Panel */}
                     <div>
                         <input

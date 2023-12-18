@@ -15,6 +15,8 @@ function Meeting() {
   const [eventId, setEventId] = useState('');
   const [count, setCount] = useState(0);
   const [teamLeaderId, setTeamLeaderId] = useState('');
+  const [problemData, setProblemData] = useState(null);
+  const [countdown, setCountdown] = useState(5*60); 
 
   const handleInputChange = (e) => {
     setInputText(e.target.value);
@@ -113,7 +115,6 @@ function Meeting() {
     updateTL();
   }, [teamLeaderId, selectedProblem]);
 
-
   async function updateCount() {
     if(selectedProblem)
       {
@@ -146,14 +147,89 @@ function Meeting() {
     updateCount();
   }, [count, selectedProblem]);
 
+  const fetchProblemData = async () => {
+    try {
+      const docRef = doc(db, 'events', eventId);
+      const eventSnapshot = await getDoc(docRef);
+      console.log(eventSnapshot.data().problems);
+      eventSnapshot.data().problems.forEach((item) => {
+        if (item.id == selectedProblem) {
+            setProblemData(item);
+        } else {
+          console.error('Selected problem not found in events collection.');
+        }
+      });
+    } catch (error) {
+      console.error('Error fetching problem data:', error);
+    }
+  };
+
+  useEffect(() => {
+    fetchProblemData();
+  }, [selectedProblem, eventId]);
+
+  useEffect(() => {
+    if(selectedProblem){
+      let countdownInterval;
+
+      const rb = getDatabase();
+      const problemRef = ref(rb, selectedProblem);
+
+      const unsubscribe = onValue(problemRef, (snapshot) => {
+        const data = snapshot.val();
+
+        // Ensure data exists and isCountdownActive is explicitly true
+        if (data !== null && data.isCountdownActive && countdown > 0) {
+          // Start the countdown
+          countdownInterval = setInterval(() => {
+            setCountdown((prevCountdown) => {
+              if (prevCountdown <= 0) {
+                clearInterval(countdownInterval);
+
+                // Reset the countdown locally
+                setCountdown(5*60);
+
+                // Update the isCountdownActive value to false in the database
+                update(problemRef, {
+                  isCountdownActive: false,
+                });
+              }
+              return prevCountdown - 1;
+            });
+          }, 1000);
+        } else {
+          // If isCountdownActive is false or undefined, reset the countdown
+          clearInterval(countdownInterval);
+          setCountdown(5*60);
+        }
+      });
+
+      // Cleanup the listener and interval when the component unmounts or when isCountdownActive becomes false
+      return () => {
+        clearInterval(countdownInterval);
+        unsubscribe();
+      };
+    }
+  }, [selectedProblem]);
 
   return (
+    <div className='relative z-0 flex h-full w-full overflow-auto'>
+      {/* Countdown timer */}
+      <p className="text-red-950 font-bold mx-2"> {"Timer:"} </p>
+      {<p className="text-red-500">{`${Math.floor(countdown / 60)}:${countdown % 60}`}</p>}
     <div className="flex flex-col items-center justify-center h-screen">
-      <h2 className="text-lg font-bold text-red-950 mb-4">Meeting Page</h2>
-
-      <div className=" p-4 mb-4">
+      {/* Display problem data */}
+      {problemData && (
+            <>
+              <h3 className="text-md text-red-950 font-bold mb-2">{"Problem Name: " + problemData.name}</h3>
+              <p>{"Context: " + problemData.context}</p>
+            </>
+          )}
+      <div className="p-4 mb-4">
+        
         {/* Read-only text display box */}
-        <div className="flex flex-col justify-between w-[500px] h-[300px] bg-white p-4 mx-10 overflow-y-auto">
+        <div className="flex flex-col justify-between w-[500px] h-[300px] bg-white p-4 mx-10 overflow-y-auto"> 
+          {/* Display additional text */}
           {displayText}
         </div>
       </div>
@@ -173,9 +249,10 @@ function Meeting() {
           onClick={handleDisplayText}
           disabled={!inputText.trim()}
         >
-          Kaydet
+          Save
         </button>
         </div>
+    </div>
     </div>
   );
 }
