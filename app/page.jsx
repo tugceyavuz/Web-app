@@ -31,7 +31,7 @@ const Home = () => {
           const problem = data[problemKey];
 
           // Check if the problem is active
-          if (problem.isActive) {
+          if (problem.isActive && problem.userCount <= 6) {
             const problemName = problem.name; // Assuming each problem has a 'name' property
 
             // Add the problem name to the problems array

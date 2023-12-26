@@ -34,7 +34,7 @@ function tlEditor() {
     try {
       const docRef = doc(db, 'events', eventId);
       const eventSnapshot = await getDoc(docRef);
-      console.log(eventSnapshot.data().problems);
+
       eventSnapshot.data().problems.forEach((item) => {
         if (item.id == selectedProblem) {
             setProblemData(item);
@@ -73,24 +73,45 @@ function tlEditor() {
     },
   });
 
-  // Function to handle saving the poll to the database
-  const handleSavePoll = (question, options) => {
-    // Implement the logic to save the poll to the database
-    // You can use this function to update your database with the poll details
-    console.log('Question:', question);
-    console.log('Options:', options);
-    // Additional logic for saving the poll...
+  const handleSavePoll = async (options) => {
+    try {
+      if (!eventId || !selectedProblem) {
+        console.error('Event ID or selected problem not found.');
+        return;
+      }
+  
+      const docRef = doc(db, 'events', eventId);
+      const eventSnapshot = await getDoc(docRef);
+  
+      if (!eventSnapshot.exists()) {
+        console.error('Event not found in Firestore.');
+        return;
+      }
+  
+      const eventData = eventSnapshot.data();
+      const updatedProblems = eventData.problems.map((item) => {
+        if (item.id === selectedProblem) {
+          // Modify the poll array locally
+          const updatedPoll = options.map((option) => ({ name: option, vote: 0 }));
+          return {
+            ...item,
+            poll: updatedPoll,
+          };
+        }
+        return item;
+      });
+  
+      // Update the entire document with the modified problems array
+      await updateDoc(docRef, {
+        problems: updatedProblems,
+      });
+  
+      console.log('Poll options saved successfully.');
+    } catch (error) {
+      console.error('Error saving poll options:', error);
+    }
   };
-
-  // Function to toggle selected options
-  const handleToggleOption = (option) => {
-    const { selectedOptions } = formik.values;
-    const updatedSelectedOptions = selectedOptions.includes(option)
-      ? selectedOptions.filter((selected) => selected !== option)
-      : [...selectedOptions, option];
-
-    formik.setFieldValue('selectedOptions', updatedSelectedOptions);
-  };
+  
 
   const handleDisplayText = async (Count) => {
     try {
@@ -114,8 +135,6 @@ function tlEditor() {
                 </div>
               );
             });
-
-            console.log(displayText);
   
             // Update your state or UI as needed
             setDisplayText(<div>{displayText}</div>);
@@ -130,8 +149,6 @@ function tlEditor() {
     handleDisplayText();
   }, [problemData]);
   
-
-
   // JSX structure
   return (
     <div className='relative z-0 flex h-full w-full overflow-auto'>
@@ -220,7 +237,7 @@ function tlEditor() {
                 {/* Button to update display text (save the poll) */}
                 <button
                   type="button"
-                  onClick={() => handleSavePoll(formik.values.question, formik.values.options)}
+                  onClick={() => handleSavePoll(formik.values.options)}
                   className="bg-red-950 bg-opacity-95 text-white py-1 px-4 rounded hover:bg-red-950"
                   disabled={formik.values.options.length === 0}
                 >

@@ -329,7 +329,7 @@ function AdminPanel() {
 
                 {/* Render problems inside the event */}
                 <div className="ml-4">
-                    {event.problems.map((problem) => (
+                    {Array.isArray(event.problems) && event.problems?.map((problem) => (
                     <div key={problem.name} className="mb-2">
                         <h3 className="text-md ">{problem.name}</h3>
                         {/* Display participant names */}
@@ -428,8 +428,7 @@ function AdminPanel() {
                         <div key={event.id} className="mb-4">
                             <h3 className="text-md font-semibold text-red-950">{event.name}</h3>
                             <div className="ml-4">
-                                {event.problems
-                                    .filter((problem) => problem.isActive)
+                                {Array.isArray(event.problems) && event.problems?.filter((problem) => problem.isActive)
                                     .map((activeProblem) => (
                                         <div key={activeProblem.name} className="mb-2">
                                             <p>
