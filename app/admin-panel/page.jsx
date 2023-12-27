@@ -345,7 +345,7 @@ function AdminPanel() {
                         {problem.poll?.map((poll, index) => (
                             <span key={index}>
                             {index > 0 && ' '}
-                            {`Öneri : ${poll.idea}, Oy Sayısı: ${poll.vote}`}
+                            {`Öneri : ${poll.name}, Oy Sayısı: ${poll.vote}`}
                             <br />
                             </span>
                         ))}

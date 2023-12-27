@@ -152,6 +152,9 @@ function VotePage() {
               });
 
               console.log(`Vote for ${selectedOption} incremented.`);
+
+              if (isTeamLeader) {router.push('/end');}
+
             }
 
             // Additional logic as needed
