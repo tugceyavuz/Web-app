@@ -117,8 +117,50 @@ function VotePage() {
       selectedOptions: [],
     },
     onSubmit: (values) => {
-      // Handle form submission, e.g., update votes in the database
-      console.log('Selected Options:', values.selectedOptions);
+      const docRef = doc(db, 'events', eventId);
+      const eventSnapshot = getDoc(docRef);
+
+      if (eventSnapshot.exists()) {
+        const problems = eventSnapshot.data().problems;
+        const selectedProblemData = problems.find((item) => item.id === selectedProblem);
+
+        if (selectedProblemData) {
+          setProblemData(selectedProblemData);
+          setPollOptions(selectedProblemData.poll);
+
+          // Handle form submission, e.g., update votes in the Firestore database
+          try {
+            const db = getFirestore();
+
+            for (const selectedOption of values.selectedOptions) {
+              const updatedPollOptions = selectedProblemData.poll.map(option => {
+                if (option.name === selectedOption) {
+                  // Increment the vote count for the selected option
+                  return { ...option, votes: (option.votes || 0) + 1 };
+                }
+                return option;
+              });
+
+              // Update the poll array with the new vote count in the Firestore database
+              updateDoc(docRef, {
+                problems: problems.map(problem => {
+                  if (problem.id === selectedProblem) {
+                    return { ...problem, poll: updatedPollOptions };
+                  }
+                  return problem;
+                })
+              });
+
+              console.log(`Vote for ${selectedOption} incremented.`);
+            }
+
+            // Additional logic as needed
+
+          } catch (error) {
+            console.error('Error updating votes:', error);
+          }
+        }
+      }
     },
   });
 
