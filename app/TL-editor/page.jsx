@@ -112,6 +112,14 @@ function tlEditor() {
     }
   };
   
+  const handleVotePage = async () => {
+    if(selectedProblem){
+      const rb = getDatabase();
+      const problemRef = ref(rb, selectedProblem);
+      update(problemRef, { isVoteActive: true});
+      router.push('/vote-page');
+    }
+  }
 
   const handleDisplayText = async (Count) => {
     try {
@@ -158,7 +166,7 @@ function tlEditor() {
         <div className="flex-grow"></div>
         {/* Button 3 */}
         <button className="mb-5 p-2 w-[160px] h-[80px] bg-red-900 text-white rounded hover:bg-red-600"
-          onClick={() => {router.push('/vote-page');}}
+          onClick={() => handleVotePage()}
         >
           Start Poll
         </button>

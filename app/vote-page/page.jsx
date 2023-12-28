@@ -116,55 +116,48 @@ function VotePage() {
     initialValues: {
       selectedOptions: [],
     },
-    onSubmit: (values) => {
-      const docRef = doc(db, 'events', eventId);
-      const eventSnapshot = getDoc(docRef);
-
-      if (eventSnapshot.exists()) {
-        const problems = eventSnapshot.data().problems;
-        const selectedProblemData = problems.find((item) => item.id === selectedProblem);
-
-        if (selectedProblemData) {
-          setProblemData(selectedProblemData);
-          setPollOptions(selectedProblemData.poll);
-
-          // Handle form submission, e.g., update votes in the Firestore database
-          try {
-            const db = getFirestore();
-
-            for (const selectedOption of values.selectedOptions) {
-              const updatedPollOptions = selectedProblemData.poll.map(option => {
-                if (option.name === selectedOption) {
-                  // Increment the vote count for the selected option
-                  return { ...option, votes: (option.votes || 0) + 1 };
+    onSubmit: async (values) => {
+      try {
+        const docRef = doc(db, 'events', eventId);
+        const eventSnapshot = await getDoc(docRef);
+    
+        if (eventSnapshot.exists()) {
+          const problems = eventSnapshot.data().problems;
+          const selectedProblemData = problems.find((item) => item.id === selectedProblem);
+    
+          if (selectedProblemData) {
+            const updatedPollOptions = selectedProblemData.poll.map(option => {
+              if (values.selectedOptions.includes(option.name)) {
+                // Increment the vote count for the selected option
+                return { ...option, vote: (option.vote || 0) + 1 };
+              }
+              return option;
+            });
+    
+            // Update the poll array with the new vote count in the Firestore database
+            await updateDoc(docRef, {
+              problems: problems.map(problem => {
+                if (problem.id === selectedProblem) {
+                  return { ...problem, poll: updatedPollOptions };
                 }
-                return option;
-              });
-
-              // Update the poll array with the new vote count in the Firestore database
-              updateDoc(docRef, {
-                problems: problems.map(problem => {
-                  if (problem.id === selectedProblem) {
-                    return { ...problem, poll: updatedPollOptions };
-                  }
-                  return problem;
-                })
-              });
-
-              console.log(`Vote for ${selectedOption} incremented.`);
-
-              if (isTeamLeader) {router.push('/end');}
-
-            }
-
+                return problem;
+              })
+            });
+    
+            console.log('Votes incremented successfully.');
+    
             // Additional logic as needed
-
-          } catch (error) {
-            console.error('Error updating votes:', error);
+    
+          } else {
+            console.error('Selected problem not found in events collection.');
           }
+        } else {
+          console.error('Event document does not exist.');
         }
+      } catch (error) {
+        console.error('Error updating votes:', error);
       }
-    },
+    }
   });
 
   const minutes = Math.floor(timer / 60);
@@ -183,8 +176,10 @@ function VotePage() {
           // Update the isActive field to false
           await update(problemRef, {
             isActive: false,
+            isVoteActive: false,
           });
           setIsEnded(true);
+          router.push('/end');
   
           console.log('Problem marked as finished.');
         } else {
@@ -196,35 +191,26 @@ function VotePage() {
     }
   };
 
-  useEffect(() => {
-    const checkIfProblemIsFinished = async () => {
-      try {
-        if (selectedProblem) {
-          const rb = getDatabase();
-          const problemRef = ref(rb, selectedProblem);
-  
-          // Fetch the problem data using get()
-          const snapshot = await get(problemRef);
-  
-          if (snapshot.exists()) {
-            const isActive = snapshot.val().isActive;
-            console.log('isActive:', isActive);
-            if (!isActive) {
-              // Redirect to '/meeting-page' if the problem is finished
-              router.push('/end');
-            }
-          } else {
-            console.error('Problem document does not exist.');
-          }
+  const checkIsActive = () => {
+    if (selectedProblem){
+      const rb = getDatabase();
+      const problemRef = ref(rb, selectedProblem);
+    
+      onValue(problemRef, (snapshot) => {
+        const isActive = snapshot.val()?.isActive;
+    
+        if (isActive === false) {
+          // Problem is not active, redirect to '/end'
+          router.push('/end');
         }
-      } catch (error) {
-        console.error('Error checking if the problem is finished:', error);
-      }
-    };
+      });
+    }
+  };
   
-    // Call the function when the component mounts and when `isEnded` changes
-    checkIfProblemIsFinished();
-  }, [isEnded]);
+  // Call the function when the component mounts
+  useEffect(() => {
+    checkIsActive();
+  }, [selectedProblem, router]);
   
   
 

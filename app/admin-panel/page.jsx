@@ -108,6 +108,7 @@ function AdminPanel() {
           // Data for the new problem
           const newProblemData = {
             isCountdownActive: false,
+            isVoteActive: false,
             isActive: true,
             eventID: lastCreatedEvent.id,
             teamLeaderId: '',
@@ -294,6 +295,11 @@ function AdminPanel() {
         };
     }, [userCounts]);
 
+    
+
+    useEffect(() => {
+        fetchEvents();
+    }, []);
          
 
     const handleSignOut = async () => {
@@ -345,7 +351,7 @@ function AdminPanel() {
                         {problem.poll?.map((poll, index) => (
                             <span key={index}>
                             {index > 0 && ' '}
-                            {`Öneri : ${poll.name}, Oy Sayısı: ${poll.vote}`}
+                            {`Idea : ${poll.name}, Votes: ${poll.vote}`}
                             <br />
                             </span>
                         ))}

@@ -16,6 +16,7 @@ function Meeting() {
   const [count, setCount] = useState(0);
   const [teamLeaderId, setTeamLeaderId] = useState('');
   const [problemData, setProblemData] = useState(null);
+  const [isVoteActive, setIsVoteActive] = useState(false);
   const [countdown, setCountdown] = useState(5*60); 
 
   const handleInputChange = (e) => {
@@ -211,6 +212,35 @@ function Meeting() {
       };
     }
   }, [selectedProblem]);
+
+  useEffect(() => {  
+    handleVotePage();
+  }, [isVoteActive, selectedProblem]);
+  
+  const handleVotePage = async () => {
+    if(selectedProblem)
+      {
+        const rb = getDatabase();
+        const Ref = ref(rb, selectedProblem);
+        const unsubscribe = onValue(Ref, (snapshot) => {
+        const data = snapshot.val();
+ 
+        // Ensure data exists
+        if (data !== null) {
+          if(data.isVoteActive){
+            setIsVoteActive(true);
+            router.push('/vote-page');
+          }
+        }
+        });
+ 
+        return () => {
+          // Cleanup the listener when the component unmounts
+          unsubscribe();
+        };
+      }
+
+  };
 
   return (
     <div className='relative z-0 flex h-full w-full overflow-auto'>
