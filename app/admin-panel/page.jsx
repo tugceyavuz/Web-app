@@ -296,7 +296,6 @@ function AdminPanel() {
     }, [userCounts]);
 
     
-
     useEffect(() => {
         fetchEvents();
     }, []);

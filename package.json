@@ -9,6 +9,8 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@emotion/styled": "^11.11.0",
+    "@mui/material": "^5.15.3",
     "bcrypt": "^5.1.1",
     "firebase": "^10.6.0",
     "formik": "^2.4.5",

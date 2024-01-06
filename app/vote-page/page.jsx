@@ -1,11 +1,12 @@
 'use client' 
 // Import necessary dependencies and components
 import React, { useState, useEffect } from 'react';
-import { addDoc, collection, updateDoc, getDocs, doc, getDoc, arrayUnion } from 'firebase/firestore';
+import { addDoc, collection, updateDoc, getDocs, doc, getDoc, arrayUnion, arrayRemove } from 'firebase/firestore';
 import { set, ref, push, update, getDatabase, get, setDoc, onValue } from 'firebase/database';
 import { useRouter } from 'next/navigation';
 import { db } from '/firebase/config';
 import { useFormik } from 'formik';
+import { Alert } from '@mui/material';
 import * as Yup from 'yup';
 
 function VotePage() {
@@ -15,9 +16,10 @@ function VotePage() {
   const [userId, setUserId] = useState('');
   const [selectedProblem, setSelectedProblem] = useState('');
   const [eventId, setEventId] = useState('');
-  const [timer, setTimer] = useState(300); // 5 minutes in seconds
   const [isTeamLeader, setIsTeamLeader] = useState(false);
   const [isEnded, setIsEnded] = useState(false);
+  const [buttonClicked, setButtonClicked] = useState(false);
+
 
   async function fetchUrl() {
     setUserId(localStorage.getItem('userId'));
@@ -28,22 +30,6 @@ function VotePage() {
   useEffect(() => {
     fetchUrl();
   }, []);
-
-  useEffect(() => {
-    const timerInterval = setInterval(() => {
-      setTimer((prevTimer) => prevTimer - 1);
-    }, 1000);
-
-    // Clear the interval when the component is unmounted
-    return () => clearInterval(timerInterval);
-  }, []); // Empty dependency array ensures it runs only once on mount
-
-  useEffect(() => {
-    if (timer === 0) {
-      // Handle timer expiration, for example, redirect the user or perform some action
-      clearInterval(timerInterval);
-    }
-  }, [timer]);
 
   const fetchProblemData = async () => {
     try {
@@ -160,12 +146,10 @@ function VotePage() {
     }
   });
 
-  const minutes = Math.floor(timer / 60);
-  const seconds = timer % 60;
 
   const setFinished = async () => {
     try {
-      if (selectedProblem) {
+      if (selectedProblem && eventId) {
         const rb = getDatabase();
         const problemRef = ref(rb, selectedProblem);
   
@@ -179,6 +163,32 @@ function VotePage() {
             isVoteActive: false,
           });
           setIsEnded(true);
+
+          // Get a reference to the specific event
+          const eventRef = doc(db, 'events', eventId);
+
+          // Retrieve the current event data
+          const eventDoc = await getDoc(eventRef);
+
+          if (!eventDoc.exists()) {
+            console.log('Event not found');
+            return;
+          }
+
+          // Clone the problems array to avoid modifying the original array directly
+          const updatedProblems = [...(eventDoc.data().problems || [])];
+
+          // Find the index of the problem to update
+          const indexToUpdate = updatedProblems.findIndex(problem => problem.id === selectedProblem);
+
+          // If the problem is found, update it
+          if (indexToUpdate !== -1) {
+            updatedProblems[indexToUpdate] = { ...updatedProblems[indexToUpdate], isActive: false };
+          }
+
+          // Update the entire array within the event document
+          await updateDoc(eventRef, { problems: updatedProblems });
+
           router.push('/end');
   
           console.log('Problem marked as finished.');
@@ -216,10 +226,7 @@ function VotePage() {
 
   return (
     <div className="flex flex-col items-center justify-center h-full w-full">
-      
-        <p className="text-red-950 font-bold mx-2">{"Timer:"}</p>
-        <p className="text-red-950 font-bold mx-2"> {`${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`} </p>
-
+    
         {/* Display problem data */}
         {problemData && (
           <div className="p-4 flex-middle mb-4">
@@ -255,24 +262,27 @@ function VotePage() {
             </form>
         </div>
           <button
-              type="submit"
-              className="bg-red-950 text-white px-4 py-2 mt-4 rounded hover:bg-red-950"
-              onClick={(e) => {
-                e.preventDefault(); // Prevents the default form submission
-
-                if (isTeamLeader) {
-                  formik.handleSubmit(e);
-                  // If the user is a team leader, perform team leader action
-                  console.log('Team Leader Action');
-                  setFinished();
-                } else {
-                  // If the user is not a team leader, perform regular user action
-                  formik.handleSubmit(e);
-                }
-              }}
-            >
-            {isTeamLeader ? 'End Session' : 'Submit Vote'}
-          </button>
+          type="submit"
+          className={`bg-red-950 text-white px-4 py-2 mt-4 rounded hover:bg-red-950 ${buttonClicked ? 'cursor-not-allowed opacity-50' : ''}`}
+          onClick={(e) => {
+            e.preventDefault();
+            if (!buttonClicked) {
+              if (isTeamLeader) {
+                formik.handleSubmit(e);
+                console.log('Team Leader Action');
+                setFinished();
+              } else {
+                formik.handleSubmit(e);
+              }
+              setButtonClicked(true);
+            }
+          }}
+          >
+          {isTeamLeader ? 'End Session' : 'Submit Vote'}
+        </button>
+        {buttonClicked && (
+          <Alert severity="success">Votes Saved!</Alert>
+        )}
       </div>
     </div>
   );
