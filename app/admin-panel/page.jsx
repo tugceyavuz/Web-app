@@ -63,14 +63,25 @@ function AdminPanel() {
                 console.error('No recent event available to add a problem to.');
                 return;
             }
+            const userId = uuidv4();
     
             // Add the new problem to the current event with teamLeaderId as an empty string and isActive as true
             const eventDocRef = doc(db, 'events', lastCreatedEvent.id);
+            // Fetch existing participants
+
+            // Add the new participant
+            const newParticipant = {
+                id: userId,
+                name: "GPT",
+                pages: [{ name: "GPT", textVal: '' }],
+            };
+
+            // Update the document with the new participant
             await updateDoc(eventDocRef, {
                 problems: arrayUnion({
                     id: problemId,
                     name: newProblemName,
-                    partipicant: [],
+                    participant: [newParticipant],
                     poll: [],
                     context: newProblemDescription,
                     teamLeaderId: '',
@@ -78,24 +89,13 @@ function AdminPanel() {
                     count: 0,
                 }),
             });
-    
-            // Fetch updated events and set them in the state
-            const updatedEventsSnapshot = await getDocs(collection(db, 'events'));
-            const updatedEventsData = updatedEventsSnapshot.docs.map((doc) => ({
-                id: doc.id,
-                ...doc.data(),
-            }));
-            setEvents(updatedEventsData);
-    
-            // Reset input values
-            setNewProblemName('');
-            setNewProblemDescription('');
-    
+
             console.log('New problem added to the last created event (Firestore).');
         } catch (error) {
             console.error('Error adding new problem (Firestore):', error);
         }
     };
+
         
     const addNewProblemRD = async (problemId) => {
         try {
@@ -112,7 +112,7 @@ function AdminPanel() {
             isActive: true,
             eventID: lastCreatedEvent.id,
             teamLeaderId: '',
-            userCount: 0,
+            userCount: 1, //default chat gpt
             id: problemId,
             name: newProblemName,
             count: 0,
