@@ -5,6 +5,8 @@ import { addDoc, collection, updateDoc, getDocs, doc, getDoc,arrayUnion } from '
 import { set, ref, push, update, getDatabase, get, setDoc, onValue } from 'firebase/database';
 import { useRouter } from 'next/navigation';
 import { db } from '/firebase/config';
+import { OpenAIApi, Configuration } from "openai" ;
+import axios from 'axios';
 
 function Meeting() {
   const router = useRouter();
@@ -18,6 +20,8 @@ function Meeting() {
   const [problemData, setProblemData] = useState(null);
   const [isVoteActive, setIsVoteActive] = useState(false);
   const [countdown, setCountdown] = useState(5*60); 
+
+  const [GptInput, setGptInput] = useState('');
 
   const handleInputChange = (e) => {
     setInputText(e.target.value);
@@ -241,6 +245,23 @@ function Meeting() {
       }
 
   };
+
+
+  const handleGPTUser = async () => {
+    const url = 'https://api.openai.com/vl/chat/completions';
+    const headers = {
+      'Content-type': 'application/json' ,
+      'Authorization': 'Bearer ${process. env.NEXT_PUBLIC_OPENAI_API_KEY}' ,
+    };
+    const data = {
+      model: "gpt-4",
+      messages: [{"role": "user", "content": GptInput}]
+    };
+
+    axios.post(url, data, {headers: headers}).then((response) => {
+      console.log(response);
+    })
+  }
 
   return (
     <div className='relative z-0 flex h-full w-full overflow-auto'>
