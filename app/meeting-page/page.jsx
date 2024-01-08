@@ -254,7 +254,7 @@ function Meeting() {
       'Authorization': 'Bearer ${process. env.NEXT_PUBLIC_OPENAI_API_KEY}' ,
     };
     const data = {
-      model: "gpt-4",
+      model: "gpt-3.5-turbo",
       messages: [{"role": "user", "content": GptInput}]
     };
 
