@@ -21,11 +21,53 @@ function Meeting() {
   const [isVoteActive, setIsVoteActive] = useState(false);
   const [countdown, setCountdown] = useState(5*60); 
 
-  const [GptInput, setGptInput] = useState('');
+  const [GptInput, setGptInput] = useState('hi');
 
   const handleInputChange = (e) => {
     setInputText(e.target.value);
   };
+
+  const handleSave = async () => { 
+      try {
+        if(selectedProblem && userId && eventId)
+        { 
+          const docRef = doc(db, 'events', eventId);
+          const eventSnapshot = await getDoc(docRef);
+
+          if (!eventSnapshot.exists()) {
+            console.error('Event not found in Firestore.');
+            return;
+          }
+
+          const eventData = eventSnapshot.data();
+          const updatedProblems = eventData.problems.map((item) => {
+            if (item.id === selectedProblem) {
+                  const partipicants = item.partipicant || [];
+                  const partipicantIndex = partipicants.findIndex(partipicant => partipicant.id === userId);
+                  if (partipicantIndex !== -1) {
+                      const partipicantName = partipicants[partipicantIndex].name;
+
+                      // Save the inputText under the pages array as a new element
+                      const updatedPartipicants = [...partipicants];
+                      updatedPartipicants[partipicantIndex].pages.push({ name: partipicantName, textVal: inputText });
+                      return {
+                        ...item,
+                        partipicant: updatedPartipicants,
+                      };
+                  }     
+            }
+            return item;
+          });
+      
+          // Update the entire document with the modified problems array
+          await updateDoc(docRef, {
+            problems: updatedProblems,
+          });
+        }
+    } catch (error) {
+        console.error('Error saving inputText:', error);
+    }
+  }
 
   async function fetchUrl() {
     setUserId(localStorage.getItem('userId'));
@@ -56,12 +98,12 @@ function Meeting() {
       eventSnapshot.data().problems.forEach((item) => {
 
         if (item.id == selectedProblem) {
-          // Check if participants array exists
-          const participantData = item.partipicant.find((participant) => participant.id === userId);
+          // Check if partipicants array exists
+          const partipicantData = item.partipicant.find((partipicant) => partipicant.id === userId);
   
-          if (participantData) {
+          if (partipicantData) {
             // Assuming 'pages' is an array inside 'partipicant'
-            const pagesData = participantData.pages || [];
+            const pagesData = partipicantData.pages || [];
 
             // Display information about the user and pages up to the specified count
             const displayText = pagesData
@@ -77,7 +119,7 @@ function Meeting() {
               setDisplayText(<ul>{displayText}</ul>);
               setInputText('');
           } else {
-            console.error('Participant not found in selected problem.');
+            console.error('Partipicant not found in selected problem.');
           }
         } else {
           console.error('Selected problem not found in events collection.');
@@ -185,6 +227,7 @@ function Meeting() {
 
         // Ensure data exists and isCountdownActive is explicitly true
         if (data !== null && data.isCountdownActive && countdown > 0) {
+          handleGPTUser(GptInput);  ////////////////////////////////////////////////////////////////////////////////////
           // Start the countdown
           countdownInterval = setInterval(() => {
             setCountdown((prevCountdown) => {
@@ -247,21 +290,31 @@ function Meeting() {
   };
 
 
-  const handleGPTUser = async () => {
-    const url = 'https://api.openai.com/vl/chat/completions';
+  const handleGPTUser = async (GptInput) => {
+    const url = 'https://api.openai.com/v1/chat/completions';
     const headers = {
-      'Content-type': 'application/json' ,
-      'Authorization': 'Bearer ${process. env.NEXT_PUBLIC_OPENAI_API_KEY}' ,
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${process.env.NEXT_PUBLIC_OPENAI_API_KEY}`,
     };
     const data = {
-      model: "gpt-3.5-turbo",
-      messages: [{"role": "user", "content": GptInput}]
+      model: 'gpt-3.5-turbo',
+      messages: [{ role: 'user', content: GptInput }],
     };
-
-    axios.post(url, data, {headers: headers}).then((response) => {
-      console.log(response);
-    })
-  }
+  
+    try {
+      const response = await axios.post(url, data, { headers });
+      console.log(response.data);
+    } catch (error) {
+      if (error.response) {
+        console.error('Response Error:', error.response.data);
+      } else if (error.request) {
+        console.error('Request Error:', error.request);
+      } else {
+        console.error('Error:', error.message);
+      }
+    }
+  };
+  
 
   return (
     <div className='relative z-0 flex h-full w-full overflow-auto'>
@@ -294,10 +347,11 @@ function Meeting() {
           className="border p-2 rounded resize-none h-full w-full"
         />
 
-        {/* Button to update display text */}
+        {/* Button to save */}
         <button
           className="bg-red-950 bg-opacity-95 text-white py-1 px-4 rounded hover:bg-red-950 ml-2"
           disabled={!inputText.trim()}
+          onClick={handleSave}
         >
           Save
         </button>

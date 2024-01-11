@@ -188,10 +188,12 @@ function TlMeeting() {
       // Get the document reference from Firestore
       const eventDocRef = doc(db, 'events', eventId);
       const eventSnapshot = await getDoc(eventDocRef);
-  
+      
       // Update the count in the Realtime Database
-      const count = selectedProblem.count || 0;
-      update(problemRef, { count: count + 1 });
+      // Fetch the current data using get()
+      const snapshot = await get(problemRef);
+      const currentCount = snapshot.val().count || 0;
+      update(problemRef, { count: currentCount + 1 });
   
       // Update the pages in Firestore
       const problemsArray = eventSnapshot.data().problems;

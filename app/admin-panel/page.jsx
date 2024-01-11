@@ -81,7 +81,7 @@ function AdminPanel() {
                 problems: arrayUnion({
                     id: problemId,
                     name: newProblemName,
-                    participant: [newParticipant],
+                    partipicant: [newParticipant],
                     poll: [],
                     context: newProblemDescription,
                     teamLeaderId: '',
@@ -95,8 +95,7 @@ function AdminPanel() {
             console.error('Error adding new problem (Firestore):', error);
         }
     };
-
-        
+     
     const addNewProblemRD = async (problemId) => {
         try {
           // Get a reference to the Firebase Realtime Database
