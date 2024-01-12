@@ -5,8 +5,8 @@ import { addDoc, collection, updateDoc, getDocs, doc, getDoc,arrayUnion } from '
 import { set, ref, push, update, getDatabase, get, setDoc, onValue } from 'firebase/database';
 import { useRouter } from 'next/navigation';
 import { db } from '/firebase/config';
-import { OpenAIApi, Configuration } from "openai" ;
-import axios from 'axios';
+import { Alert } from '@mui/material';
+
 
 function Meeting() {
   const router = useRouter();
@@ -20,8 +20,7 @@ function Meeting() {
   const [problemData, setProblemData] = useState(null);
   const [isVoteActive, setIsVoteActive] = useState(false);
   const [countdown, setCountdown] = useState(5*60); 
-
-  const [GptInput, setGptInput] = useState('hi');
+  const [buttonClicked, setButtonClicked] = useState(false);
 
   const handleInputChange = (e) => {
     setInputText(e.target.value);
@@ -179,6 +178,7 @@ function Meeting() {
             console.log('Count changed:', newCount);
             setCount(newCount);  
             handleDisplayText(newCount);
+            setButtonClicked(false);
           }
         }
         });
@@ -227,7 +227,6 @@ function Meeting() {
 
         // Ensure data exists and isCountdownActive is explicitly true
         if (data !== null && data.isCountdownActive && countdown > 0) {
-          handleGPTUser(GptInput);  ////////////////////////////////////////////////////////////////////////////////////
           // Start the countdown
           countdownInterval = setInterval(() => {
             setCountdown((prevCountdown) => {
@@ -290,32 +289,6 @@ function Meeting() {
   };
 
 
-  const handleGPTUser = async (GptInput) => {
-    const url = 'https://api.openai.com/v1/chat/completions';
-    const headers = {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${process.env.NEXT_PUBLIC_OPENAI_API_KEY}`,
-    };
-    const data = {
-      model: 'gpt-3.5-turbo',
-      messages: [{ role: 'user', content: GptInput }],
-    };
-  
-    try {
-      const response = await axios.post(url, data, { headers });
-      console.log(response.data);
-    } catch (error) {
-      if (error.response) {
-        console.error('Response Error:', error.response.data);
-      } else if (error.request) {
-        console.error('Request Error:', error.request);
-      } else {
-        console.error('Error:', error.message);
-      }
-    }
-  };
-  
-
   return (
     <div className='relative z-0 flex h-full w-full overflow-auto'>
       {/* Countdown timer */}
@@ -349,12 +322,21 @@ function Meeting() {
 
         {/* Button to save */}
         <button
-          className="bg-red-950 bg-opacity-95 text-white py-1 px-4 rounded hover:bg-red-950 ml-2"
-          disabled={!inputText.trim()}
-          onClick={handleSave}
-        >
-          Save
-        </button>
+            className={`bg-red-950 bg-opacity-95 text-white py-1 px-4 rounded hover:bg-red-950 ml-2 ${buttonClicked ? 'cursor-not-allowed opacity-50' : ''}`}
+            disabled={!inputText.trim()}
+            onClick={(e) => {
+              e.preventDefault();
+              if (!buttonClicked) {
+                handleSave();
+                setButtonClicked(true);
+              }
+            }} 
+          >
+            Save
+          </button>
+          {buttonClicked && (
+            <Alert severity="success">Answer Saved!</Alert>
+          )}
         </div>
     </div>
     </div>

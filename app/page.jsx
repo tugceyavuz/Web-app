@@ -109,7 +109,7 @@ const Home = () => {
               {
                 id: userId,
                 name: isim,
-                pages: [{ name: isim, textVal: '' }],
+                pages: [],
               },
             ],
           };

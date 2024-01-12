@@ -73,7 +73,7 @@ function AdminPanel() {
             const newParticipant = {
                 id: userId,
                 name: "GPT",
-                pages: [{ name: "GPT", textVal: '' }],
+                pages: [],
             };
 
             // Update the document with the new participant
@@ -341,22 +341,28 @@ function AdminPanel() {
                         <strong>Participants:</strong>{' '}
                         {problem.partipicant?.map((partipicant) => partipicant.name).join(', ')}
                         </p>
-
+                        {/* Display context */}
+                        <p>
+                        <strong>Context:</strong> {problem.context}
+                        </p>
                         {/* Display poll array */}
                         <p>
                         <strong>Poll Results:</strong>{' '}
                         <br />
                         {problem.poll?.map((poll, index) => (
                             <span key={index}>
-                            {index > 0 && ' '}
-                            {`Idea : ${poll.name}, Votes: ${poll.vote}`}
-                            <br />
+                                {index > 0 && ' '}
+                                <span>
+                                <strong>{'Idea: '}</strong>
+                                {poll.name}
+                                <br />
+                                <strong>{'Votes: '}</strong>
+                                {poll.vote}
+                                </span>
+                                <br />
+                                <br />
                             </span>
                         ))}
-                        </p>
-                        {/* Display context */}
-                        <p>
-                        <strong>Context:</strong> {problem.context}
                         </p>
                     </div>
                     ))}

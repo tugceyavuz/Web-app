@@ -5,6 +5,9 @@ import { addDoc, collection, updateDoc, getDocs, doc, getDoc,arrayUnion } from '
 import { set, ref, push, update, getDatabase, get, setDoc, onValue } from 'firebase/database';
 import { useRouter } from 'next/navigation';
 import { db } from '/firebase/config';
+import { OpenAIApi, Configuration } from "openai" ;
+import { Alert } from '@mui/material';
+import axios from 'axios';
 
 function TlMeeting() {
   const router = useRouter();
@@ -16,6 +19,9 @@ function TlMeeting() {
   const [count, setCount] = useState(0);
   const [problemData, setProblemData] = useState(null);
   const [countdown, setCountdown] = useState(5*60); 
+  const [GptInput, setGptInput] = useState('');
+  const [buttonClicked, setButtonClicked] = useState(false);
+  const [isButtonDisabled, setIsButtonDisabled] = useState(false);
 
   async function fetchUrl() {
     setUserId(localStorage.getItem('userId'));
@@ -78,6 +84,88 @@ function TlMeeting() {
     }
   };
 
+  const handleSave = async () => { 
+      try {
+        if(selectedProblem && userId && eventId)
+        { 
+          const docRef = doc(db, 'events', eventId);
+          const eventSnapshot = await getDoc(docRef);
+
+          if (!eventSnapshot.exists()) {
+            console.error('Event not found in Firestore.');
+            return;
+          }
+
+          const eventData = eventSnapshot.data();
+          const updatedProblems = eventData.problems.map((item) => {
+            if (item.id === selectedProblem) {
+                  const partipicants = item.partipicant || [];
+                  const partipicantIndex = partipicants.findIndex(partipicant => partipicant.id === userId);
+                  if (partipicantIndex !== -1) {
+                      const partipicantName = partipicants[partipicantIndex].name;
+
+                      // Save the inputText under the pages array as a new element
+                      const updatedPartipicants = [...partipicants];
+                      updatedPartipicants[partipicantIndex].pages.push({ name: partipicantName, textVal: inputText });
+                      return {
+                        ...item,
+                        partipicant: updatedPartipicants,
+                      };
+                  }     
+            }
+            return item;
+          });
+      
+          // Update the entire document with the modified problems array
+          await updateDoc(docRef, {
+            problems: updatedProblems,
+          });
+        }
+    } catch (error) {
+        console.error('Error saving inputText:', error);
+    }
+  }
+
+  const handleSaveGPT = async (response) => { 
+      try {
+        if(selectedProblem && userId && eventId)
+        { 
+          const docRef = doc(db, 'events', eventId);
+          const eventSnapshot = await getDoc(docRef);
+
+          if (!eventSnapshot.exists()) {
+            console.error('Event not found in Firestore.');
+            return;
+          }
+
+          const eventData = eventSnapshot.data();
+          const updatedProblems = eventData.problems.map((item) => {
+            if (item.id === selectedProblem) {
+                  const partipicants = item.partipicant || [];
+                  const partipicantIndex = partipicants.findIndex(partipicant => partipicant.name === "GPT");
+                  if (partipicantIndex !== -1) {
+                      // Save the inputText under the pages array as a new element
+                      const updatedPartipicants = [...partipicants];
+                      updatedPartipicants[partipicantIndex].pages.push({ name: "GPT", textVal: response });
+                      return {
+                        ...item,
+                        partipicant: updatedPartipicants,
+                      };
+                  }     
+            }
+            return item;
+          });
+      
+          // Update the entire document with the modified problems array
+          await updateDoc(docRef, {
+            problems: updatedProblems,
+          });
+        }
+    } catch (error) {
+        console.error('Error saving inputText:', error);
+    }
+  }
+
   async function updateCount() {
     if(selectedProblem)
       {
@@ -95,6 +183,7 @@ function TlMeeting() {
             console.log('Count changed:', newCount);
             setCount(newCount);  
             handleDisplayText(newCount);
+            setButtonClicked(false);
           }
         }
         });
@@ -112,20 +201,40 @@ function TlMeeting() {
 
   const fetchProblemData = async () => {
     try {
-      const docRef = doc(db, 'events', eventId);
-      const eventSnapshot = await getDoc(docRef);
-      console.log(eventSnapshot.data().problems);
-      eventSnapshot.data().problems.forEach((item) => {
-        if (item.id == selectedProblem) {
+      if (selectedProblem && eventId) {
+        const docRef = doc(db, 'events', eventId);
+        const eventSnapshot = await getDoc(docRef);
+        console.log(eventSnapshot.data().problems);
+        eventSnapshot.data().problems.forEach((item) => {
+          if (item.id === selectedProblem) {
             setProblemData(item);
-        } else {
-          console.error('Selected problem not found in events collection.');
-        }
-      });
+          } else {
+            console.error('Selected problem not found in events collection.');
+          }
+        });
+      }
     } catch (error) {
       console.error('Error fetching problem data:', error);
     }
   };
+  
+  useEffect(() => {
+    if (problemData) {
+      console.log(problemData.context);
+      const newGptInput = "write 3 short solution with maximum 3 sentence for each, for problem: " + problemData.context;
+      setGptInput(newGptInput);
+      console.log(newGptInput); // Log the updated value here
+    }
+  }, [problemData]);
+
+  useEffect(() => {
+    if (problemData) {
+      console.log(problemData.context);
+      const newGptInput = "write 3 short solution with maximum 3 sentence for each, for problem: " + problemData.context + " and consider (if meanengless, ignore this): " + displayText;
+      setGptInput(newGptInput);
+      console.log(newGptInput); // Log the updated value here
+    }
+  }, [displayText]);
 
   useEffect(() => {
     fetchProblemData();
@@ -143,6 +252,7 @@ function TlMeeting() {
 
         // Ensure data exists and isCountdownActive is explicitly true
         if (data !== null && data.isCountdownActive && countdown > 0) {
+          setIsButtonDisabled(true);
           // Start the countdown
           countdownInterval = setInterval(() => {
             setCountdown((prevCountdown) => {
@@ -156,6 +266,8 @@ function TlMeeting() {
                 update(problemRef, {
                   isCountdownActive: false,
                 });
+
+                setIsButtonDisabled(false);
               }
               return prevCountdown - 1;
             });
@@ -222,6 +334,34 @@ function TlMeeting() {
       await updateDoc(eventDocRef, { problems: updatedProblemsArray });
     }
   };
+
+  const handleGPTUser = async () => {
+    const url = 'https://api.openai.com/v1/chat/completions';
+    const headers = {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${process.env.NEXT_PUBLIC_OPENAI_API_KEY}`,
+    };
+    const data = {
+      model: 'gpt-3.5-turbo',
+      messages: [{ role: 'user', content: GptInput }],
+    };
+  
+    try {
+      axios.post(url, data, { headers: headers }).then((response) => {
+        console.log(response.data.choices[0].message.content);
+        handleSaveGPT(response.data.choices[0].message.content);
+      });
+
+    } catch (error) {
+      if (error.response) {
+        console.error('Response Error:', error.response.data);
+      } else if (error.request) {
+        console.error('Request Error:', error.request);
+      } else {
+        console.error('Error:', error.message);
+      }
+    }
+  };
   
  
   return (
@@ -231,25 +371,27 @@ function TlMeeting() {
         {/* Spacer to push buttons to the middle */}
         <div className="flex-grow"></div>
         {/* Button 1 */}
-        <button className="mb-5 p-2 w-[160px] h-[80px] bg-red-900 text-white rounded hover:bg-red-600"
+        <button
+          className="mb-5 p-2 w-[160px] h-[80px] bg-red-900 text-white rounded hover:bg-red-600"
+          disabled={isButtonDisabled}
           onClick={() => {
-            if(selectedProblem){     
+            console.log('Start timer clicked.');
+            if (selectedProblem) {
               const rb = getDatabase();
               const problemRef = ref(rb, selectedProblem);
-              if(countdown >= 0)
-              {
+              if (countdown >= 0) {
                 update(problemRef, {
                   isCountdownActive: true,
                 });
-              }else{
+                if(problemData) handleGPTUser();
+              } else {
                 update(problemRef, {
                   isCountdownActive: false,
                 });
               }
-              
             }
           }}
-          >   
+        >
           Start Timer
         </button>
 
@@ -305,11 +447,21 @@ function TlMeeting() {
 
           {/* Button to update display text */}
           <button
-            className="bg-red-950 bg-opacity-95 text-white py-1 px-4 rounded hover:bg-red-950 ml-2"
+            className={`bg-red-950 bg-opacity-95 text-white py-1 px-4 rounded hover:bg-red-950 ml-2 ${buttonClicked ? 'cursor-not-allowed opacity-50' : ''}`}
             disabled={!inputText.trim()}
+            onClick={(e) => {
+              e.preventDefault();
+              if (!buttonClicked) {
+                handleSave();
+                setButtonClicked(true);
+              }
+            }} 
           >
             Save
           </button>
+          {buttonClicked && (
+            <Alert severity="success">Answer Saved!</Alert>
+          )}
         </div>
       </div>
     </div>
