@@ -16,10 +16,31 @@ function VotePage() {
   const [userId, setUserId] = useState('');
   const [selectedProblem, setSelectedProblem] = useState('');
   const [eventId, setEventId] = useState('');
+  const [optionNum, setOptionNum] = useState(5);
   const [isTeamLeader, setIsTeamLeader] = useState(false);
-  const [isEnded, setIsEnded] = useState(false);
   const [buttonClicked, setButtonClicked] = useState(false);
+  const [isOptionNumOk, setIsOptionNumOk] = useState(false);
+  const [countdown, setCountdown] = useState(5*60);
 
+  const calculateOptionNum = () => {
+    try {
+      if (selectedProblem && pollOptions.length > 0) {
+        const rb = getDatabase();
+        const problemRef = ref(rb, selectedProblem);  
+        onValue(problemRef, (snapshot) => {
+          const userCount = snapshot.val()?.userCount;
+          setOptionNum(Math.ceil(pollOptions.length / userCount));
+        });
+      }
+    } catch (error) {
+      console.error('Error fetching problem data:', error);
+    }
+  }
+
+  useEffect(() => {
+    console.log('pollOptions', pollOptions);  
+    calculateOptionNum();
+  }, [pollOptions]);
 
   async function fetchUrl() {
     setUserId(localStorage.getItem('userId'));
@@ -96,6 +117,7 @@ function VotePage() {
       : [...selectedOptions, option];
 
     formik.setFieldValue('selectedOptions', updatedSelectedOptions);
+    setIsOptionNumOk(updatedSelectedOptions.length >= optionNum);
   };
 
   const formik = useFormik({
@@ -146,7 +168,6 @@ function VotePage() {
     }
   });
 
-
   const setFinished = async () => {
     try {
       if (selectedProblem && eventId) {
@@ -162,7 +183,6 @@ function VotePage() {
             isActive: false,
             isVoteActive: false,
           });
-          setIsEnded(true);
 
           // Get a reference to the specific event
           const eventRef = doc(db, 'events', eventId);
@@ -221,25 +241,48 @@ function VotePage() {
   useEffect(() => {
     checkIsActive();
   }, [selectedProblem, router]);
-  
+
+  useEffect(() => {
+    let countdownInterval;
+
+    countdownInterval = setInterval(() => {
+      setCountdown((prevCountdown) => {
+        if (prevCountdown <= 0) {
+          clearInterval(countdownInterval);
+          // Reset the countdown locally
+          setCountdown(0);
+        }
+        return prevCountdown - 1;
+      });
+    }, 1000);
+
+    // Cleanup the listener and interval when the component unmounts or when isCountdownActive becomes false
+    return () => {
+      clearInterval(countdownInterval);
+    };
+
+  }, []);
   
 
   return (
     <div className="flex flex-col items-center justify-center h-full w-full">
+      <p className="text-red-950 font-bold mx-2"> {"Timer:"} </p>
+      {<p className="text-red-500">{`${Math.floor(countdown / 60)}:${countdown % 60}`}</p>}
     
         {/* Display problem data */}
         {problemData && (
-          <div className="p-4 flex-middle mb-4">
+          <div className="p-4 flex-middle">
             <h3 className="text-md text-red-950 font-bold mb-2">{"Problem Name: " + problemData.name}</h3>
             <p>{"Context: " + problemData.context}</p>
           </div>
         )}
       
       {/* Poll container */}
-      <div className="w-96" style={{height: "calc(100vh - 185px)"}}>
-        <h1 className="text-2xl text-red-950 font-bold mt-4 mb-6">Poll Options</h1>
+      <div className="w-[50%]" style={{height: "calc(100vh - 185px)"}}>
+        <h1 className="text-2xl text-red-950 font-bold mt-2 ">Poll Options</h1>
+        <p className='font-bold text-red-600'>{"Choose at least: " + optionNum +  " option!"}</p>
 
-        <div className="bg-white p-1 rounded shadow-md w-96 h-[400px] overflow-y-auto">
+        <div className="bg-white p-1 rounded shadow-md w-full overflow-y-auto" style={{height: "calc(100vh - 260px)"}}>
           <form onSubmit={formik.handleSubmit}>
               <ul>
                 {pollOptions.map((option, index) => (
@@ -263,7 +306,7 @@ function VotePage() {
         </div>
           <button
           type="submit"
-          className={`bg-red-950 text-white px-4 py-2 mt-4 rounded hover:bg-red-950 ${buttonClicked ? 'cursor-not-allowed opacity-50' : ''}`}
+          className={`bg-red-950 text-white px-4 py-2 mt-4 rounded hover:bg-red-950 ${buttonClicked || !isOptionNumOk ? 'opacity-50 cursor-not-allowed' : ''}`}
           onClick={(e) => {
             e.preventDefault();
             if (!buttonClicked) {

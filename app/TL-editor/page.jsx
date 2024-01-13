@@ -19,6 +19,7 @@ function tlEditor() {
   const [userId, setUserId] = useState('');
   const [selectedProblem, setSelectedProblem] = useState('');
   const [eventId, setEventId] = useState('');
+  
 
   async function fetchUrl() {
     setUserId(localStorage.getItem('userId'));
@@ -121,7 +122,7 @@ function tlEditor() {
     }
   }
 
-  const handleDisplayText = async (Count) => {
+  const handleDisplayText = async () => {
     try {
       const participantData = problemData.partipicant;
   
@@ -138,7 +139,7 @@ function tlEditor() {
   
               return (
                 <div key={participantIndex}>
-                  <h3>{`Participant ${participantIndex + 1}`}</h3>
+                  <h3><strong>{`Page ${participantIndex + 1}`}</strong></h3>
                   <ul>{participantText}</ul>
                 </div>
               );
@@ -164,7 +165,7 @@ function tlEditor() {
       <div className="flex flex-col items-center justify-start h-screen p-4 bg-red-950 bg-opacity-95">
         {/* Spacer to push buttons to the middle */}
         <div className="flex-grow"></div>
-        {/* Button 3 */}
+        {/* Button */}
         <button className="mb-5 p-2 w-[160px] h-[80px] bg-red-900 text-white rounded hover:bg-red-600"
           onClick={() => handleVotePage()}
         >
@@ -179,7 +180,7 @@ function tlEditor() {
         {/* Display problem data */}
         {problemData && (
           <>
-            <h3 className="text-md text-red-950 font-bold mb-2">{"Problem Name: " + problemData.name}</h3>
+            <h3 className="text-md text-red-950 font-bold mb-3">{"Problem Name: " + problemData.name}</h3>
             <p>{"Context: " + problemData.context}</p>
           </>
         )}
@@ -188,72 +189,86 @@ function tlEditor() {
         <div className="flex w-full mt-4" style={{ height: "calc(100vh - 60px)" }}>
 
           {/* Part 1: Display lists of ideas in editable texts */}
-          <div className="flex flex-col justify-between w-[444px] bg-white p-4 mx-10 overflow-y-auto" >
+          <div className="flex flex-col justify-between w-[400px] bg-white p-4 mx-10 overflow-y-auto" style={{height: "calc(100vh - 85px)" }} >
             {/* Textbox in the bottom middle */}
             {/* Display and edit additional text */}
-            <div contentEditable={true} className="border p-2 rounded resize-none h-full w-full mb-2">
+            <div contentEditable={true} >
               {displayText}
             </div>
           </div>
 
           {/* Part 2: Create multi-choice poll using Formik */}
-          <div className="flex flex-col justify-between w-[50%] bg-white p-4 mx-2 overflow-y-auto">
-            <form onSubmit={formik.handleSubmit}>
-              <div className="flex absolute bg-white">
-                  <h3 className="flex text-md text-red-950 w-full bg-white font-bold">Enter Poll Values</h3>       
-              </div>   
-
-              {/* List of options */}
-              <div className="flex flex-col mt-7 pb-15 gap-2 overflow-y-auto">
-                {formik.values.options.map((option, index) => (
-                  <div key={index} className="flex items-center">
-                    <input
-                      type="checkbox"
-                      checked={formik.values.selectedOptions.includes(option)}
-                      className="mr-2"
+          <div className="flex flex-col justify-between w-[400px] bg-red overflow-y-auto" style={{height: "calc(100vh - 155px)"}}>
+            <div className="flex absolute">
+                <h3 className="flex text-md text-red-950 w-full h-full bg-white font-bold">Poll Values</h3>       
+            </div> 
+            <div className="flex flex-col justify-between bg-white overflow-y-auto" style={{ height: "calc(100vh - 285px)", marginTop: "24px", marginBottom: "5px" }}>
+              <form onSubmit={formik.handleSubmit}>
+                {/* List of options */}
+                <div className="h-full flex flex-col mt-3 pb-2 mx-2 gap-2" style={{ flexWrap: 'wrap' }}>
+                  {formik.values.options.map((option, index) => (
+                    <div key={index} className="flex items-center">
+                      <input
+                        type="checkbox"
+                        checked={formik.values.selectedOptions.includes(option)}
+                        className="mr-2"
+                      />
+                      <div className="mr-12">
+                        <span>{option}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <div className="mt-2 absolute w-[400px] bottom-0" style={{marginBottom: "2px"}}>
+                  {/* Textbox for adding a new option */}
+                  <textarea
+                      rows="5" // Set rows to 1 for a single line, adjust as needed
+                      placeholder="Add new option"
+                      name="newOption"
+                      value={formik.values.newOption}
+                      onChange={formik.handleChange}
+                      onBlur={formik.handleBlur}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault(); // Prevent the default behavior (inserting a newline)
+                          formik.handleChange(e); // Manually trigger the handleChange
+                          formik.setFieldValue(
+                            'newOption',
+                            `${formik.values.newOption}\n`
+                          );
+                        }
+                      }}
+                      className="border p-2 rounded resize-none w-full mb-2"
                     />
-                    <span>{option}</span>
-                  </div>
-                ))}
-              </div>
-              
-              <div className="mt-4 absolute bg-white bottom-0">
-                {/* Textbox for adding a new option */}
-                <input
-                  type="text"
-                  placeholder="Add new option"
-                  name="newOption"
-                  value={formik.values.newOption}
-                  onChange={formik.handleChange}
-                  onBlur={formik.handleBlur}
-                  className="border p-2 rounded resize-none w-full mb-2"
-                />
-                {formik.touched.newOption && formik.errors.newOption ? (
-                  <div className="text-red-500">{formik.errors.newOption}</div>
-                ) : null}
 
-                {/* Button to add a new option */}
-                <button
-                  type="button"
-                  onClick={formik.handleSubmit}
-                  className="bg-red-950 bg-opacity-95 text-white py-1 px-4 rounded hover:bg-red-950"
-                  disabled={!formik.values.newOption.trim() || formik.errors.newOption}
-                >
-                  Add Option
-                </button>
+                  {formik.touched.newOption && formik.errors.newOption ? (
+                    <div className="text-red-500">{formik.errors.newOption}</div>
+                  ) : null}
 
-                {/* Button to update display text (save the poll) */}
-                <button
-                  type="button"
-                  onClick={() => handleSavePoll(formik.values.options)}
-                  className="bg-red-950 bg-opacity-95 text-white py-1 px-4 rounded hover:bg-red-950"
-                  disabled={formik.values.options.length === 0}
-                >
-                  Save Poll
-                </button>
-              </div>          
-            </form>
-          </div>
+                  {/* Button to add a new option */}
+                  <button
+                    type="button"
+                    onClick={formik.handleSubmit}
+                    className="bg-red-950 bg-opacity-95 text-white py-1 px-4 absolute-bottom rounded hover:bg-red-900"
+                    disabled={!formik.values.newOption.trim() || formik.errors.newOption}
+                  >
+                    Add Option
+                  </button>
+
+                  {/* Button to update display text (save the poll) */}
+                  <button
+                    type="button"
+                    onClick={() => handleSavePoll(formik.values.options)}
+                    className="bg-red-950 bg-opacity-95 text-white py-1 px-4 absolute-bottom rounded hover:bg-red-900"
+                    disabled={formik.values.options.length === 0}
+                  >
+                    Save Poll
+                  </button>
+                </div>
+              </form>
+            </div>
+
+          </div> 
         </div>
       </div>
     </div>

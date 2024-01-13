@@ -99,10 +99,11 @@ function Meeting() {
         if (item.id == selectedProblem) {
           // Check if partipicants array exists
           const partipicantData = item.partipicant.find((partipicant) => partipicant.id === userId);
-  
+          console.log(partipicantData.name);
           if (partipicantData) {
             // Assuming 'pages' is an array inside 'partipicant'
             const pagesData = partipicantData.pages || [];
+            console.log(pagesData);
 
             // Display information about the user and pages up to the specified count
             const displayText = pagesData
@@ -176,9 +177,13 @@ function Meeting() {
           // Only trigger when any count changes
           if (newCount !== count) {
             console.log('Count changed:', newCount);
-            setCount(newCount);  
-            handleDisplayText(newCount);
-            setButtonClicked(false);
+            setCount(newCount);
+          
+            // Introduce a delay before calling handleDisplayText
+            setTimeout(() => {
+              handleDisplayText(newCount);
+              setButtonClicked(false);
+            }, 100); 
           }
         }
         });

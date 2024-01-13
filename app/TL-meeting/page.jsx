@@ -12,6 +12,7 @@ import axios from 'axios';
 function TlMeeting() {
   const router = useRouter();
   const [displayText, setDisplayText] = useState('');
+  const [GptInput2, setGptInput2] = useState('')
   const [inputText, setInputText] = useState('');
   const [userId, setUserId] = useState('');
   const [selectedProblem, setSelectedProblem] = useState('');
@@ -58,6 +59,7 @@ function TlMeeting() {
           if (participantData) {
             // Assuming 'pages' is an array inside 'partipicant'
             const pagesData = participantData.pages || [];
+            console.log(participantData.name);
 
             // Display information about the user and pages up to the specified count
             const displayText = pagesData
@@ -68,9 +70,17 @@ function TlMeeting() {
                     <strong>Text:</strong> {page.textVal}
                   </li>
                 ));
-
-              // Update your state or UI as needed
+              
               setDisplayText(<ul>{displayText}</ul>);
+
+            const combinedText = pagesData
+                .slice(0, Count)
+                .map((page) => page.textVal)
+                .join(',');
+              
+              setGptInput2(combinedText);
+              // Update your state or UI as needed
+              
               setInputText('');
           } else {
             console.error('Participant not found in selected problem.');
@@ -181,9 +191,13 @@ function TlMeeting() {
           // Only trigger when any count changes
           if (newCount !== count) {
             console.log('Count changed:', newCount);
-            setCount(newCount);  
-            handleDisplayText(newCount);
-            setButtonClicked(false);
+            setCount(newCount);
+          
+            // Introduce a delay before calling handleDisplayText
+            setTimeout(() => {
+              handleDisplayText(newCount);
+              setButtonClicked(false);
+            }, 100); 
           }
         }
         });
@@ -230,11 +244,11 @@ function TlMeeting() {
   useEffect(() => {
     if (problemData) {
       console.log(problemData.context);
-      const newGptInput = "write 3 short solution with maximum 3 sentence for each, for problem: " + problemData.context + " and consider (if meanengless, ignore this): " + displayText;
+      const newGptInput = "write 3 short solution with maximum 3 sentence for each, for problem: " + problemData.context + " and consider (if meanengless, ignore this): " + GptInput2;
       setGptInput(newGptInput);
       console.log(newGptInput); // Log the updated value here
     }
-  }, [displayText]);
+  }, [GptInput2]);
 
   useEffect(() => {
     fetchProblemData();
@@ -363,7 +377,6 @@ function TlMeeting() {
     }
   };
   
- 
   return (
     <div className='relative z-0 flex h-full w-full overflow-auto'>
       {/* Sidebar */}
@@ -397,6 +410,7 @@ function TlMeeting() {
 
         {/* Button 2 */}
         <button className="mb-5 p-2 w-[160px] h-[80px] bg-red-900 text-white rounded hover:bg-red-600"
+          disabled={isButtonDisabled}
           onClick={handlePageChange}
         >
           Change Pages
@@ -404,8 +418,9 @@ function TlMeeting() {
 
         {/* Button 3 */}
         <button className="mb-5 p-2 w-[160px] h-[80px] bg-red-900 text-white rounded hover:bg-red-600"
+          disabled={isButtonDisabled}
           onClick={() => {router.push('/TL-editor');}}
-          >
+        >
           End Process / Go to Editing
         </button>
 
