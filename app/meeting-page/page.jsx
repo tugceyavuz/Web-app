@@ -168,24 +168,24 @@ function Meeting() {
         const rb = getDatabase();
         const Ref = ref(rb, selectedProblem);
         const unsubscribe = onValue(Ref, (snapshot) => {
-        const data = snapshot.val();
- 
-        // Ensure data exists
-        if (data !== null) {
+          const data = snapshot.val();
+  
+          // Ensure data exists
+          if (data !== null) {
 
-          const newCount = data.count;
-          // Only trigger when any count changes
-          if (newCount !== count) {
-            console.log('Count changed:', newCount);
-            setCount(newCount);
-          
-            // Introduce a delay before calling handleDisplayText
-            setTimeout(() => {
-              handleDisplayText(newCount);
-              setButtonClicked(false);
-            }, 100); 
+            const newCount = data.count;
+            // Only trigger when any count changes
+            if (newCount !== count) {
+              console.log('Count changed:', newCount);
+              setCount(newCount);
+            
+              // Introduce a delay before calling handleDisplayText
+              setTimeout(() => {
+                handleDisplayText(newCount);
+                setButtonClicked(false);
+              }, 100); 
+            }
           }
-        }
         });
  
         return () => {

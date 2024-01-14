@@ -25,14 +25,36 @@ function TlMeeting() {
   const [isButtonDisabled, setIsButtonDisabled] = useState(false);
 
   async function fetchUrl() {
-    setUserId(localStorage.getItem('userId'));
-    setSelectedProblem(localStorage.getItem('selectedProblem'));
-    setEventId(localStorage.getItem('eventId'));
+      setUserId(localStorage.getItem('userId'));
+      setSelectedProblem(localStorage.getItem('selectedProblem'));
+      setEventId(localStorage.getItem('eventId'));
   }
  
   useEffect(() => {
     fetchUrl();
   }, []);
+
+  const fetchUSR = async () => {
+      const rb = getDatabase();
+      const problemRef = ref(rb, selectedProblem);
+
+      // Subscribe to changes on the specified location
+      const unsubscribe = onValue(problemRef, (snapshot) => {
+          // The callback function is called whenever there's a change in the data
+          const data = snapshot.val();
+          
+          // Ensure data exists
+          if (data !== null) {
+              setUserId(data.teamLeaderId);
+          }
+      });
+
+      // Return a cleanup function to unsubscribe when the component unmounts
+      return () => {
+          // Cleanup the listener when the component unmounts
+          unsubscribe();
+      };
+  }
 
   const handleDisplayText = async (Count) => {
     try {
@@ -59,7 +81,6 @@ function TlMeeting() {
           if (participantData) {
             // Assuming 'pages' is an array inside 'partipicant'
             const pagesData = participantData.pages || [];
-            console.log(participantData.name);
 
             // Display information about the user and pages up to the specified count
             const displayText = pagesData
@@ -72,6 +93,7 @@ function TlMeeting() {
                 ));
               
               setDisplayText(<ul>{displayText}</ul>);
+              setInputText('');
 
             const combinedText = pagesData
                 .slice(0, Count)
@@ -79,9 +101,7 @@ function TlMeeting() {
                 .join(',');
               
               setGptInput2(combinedText);
-              // Update your state or UI as needed
-              
-              setInputText('');
+              // Update your state or UI as needed     
           } else {
             console.error('Participant not found in selected problem.');
           }
@@ -96,6 +116,7 @@ function TlMeeting() {
 
   const handleSave = async () => { 
       try {
+        console.log("team leader userId: " + userId);
         if(selectedProblem && userId && eventId)
         { 
           const docRef = doc(db, 'events', eventId);
@@ -105,7 +126,7 @@ function TlMeeting() {
             console.error('Event not found in Firestore.');
             return;
           }
-
+          
           const eventData = eventSnapshot.data();
           const updatedProblems = eventData.problems.map((item) => {
             if (item.id === selectedProblem) {
@@ -254,8 +275,8 @@ function TlMeeting() {
     fetchProblemData();
   }, [selectedProblem, eventId]);
 
-  useEffect(() => {
-    if(selectedProblem){
+  const handleCountdown = async () => {
+    if(selectedProblem){   
       let countdownInterval;
 
       const rb = getDatabase();
@@ -299,6 +320,13 @@ function TlMeeting() {
         unsubscribe();
       };
     }
+  }
+
+  useEffect(() => {
+    if(problemData){
+      fetchUSR();
+    }
+    handleCountdown();
   }, [selectedProblem]);
 
   const handleInputChange = (e) => {
@@ -418,7 +446,7 @@ function TlMeeting() {
 
         {/* Button 3 */}
         <button className="mb-5 p-2 w-[160px] h-[80px] bg-red-900 text-white rounded hover:bg-red-600"
-          disabled={isButtonDisabled}
+          //disabled={isButtonDisabled}
           onClick={() => {router.push('/TL-editor');}}
         >
           End Process / Go to Editing

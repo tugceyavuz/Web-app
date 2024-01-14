@@ -210,7 +210,9 @@ function VotePage() {
           // Update the entire array within the event document
           await updateDoc(eventRef, { problems: updatedProblems });
 
-          router.push('/end');
+          setTimeout(() => {
+            router.push('/end');
+          }, 500);
   
           console.log('Problem marked as finished.');
         } else {
@@ -232,7 +234,9 @@ function VotePage() {
     
         if (isActive === false) {
           // Problem is not active, redirect to '/end'
-          router.push('/end');
+          setTimeout(() => {
+            router.push('/end');
+          }, 500);
         }
       });
     }

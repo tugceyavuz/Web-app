@@ -16,6 +16,7 @@ function AdminPanel() {
     const [events, setEvents] = useState([]);
     const [newEventName, setNewEventName] = useState('');
     const [newProblemName, setNewProblemName] = useState('');
+    const [selectedEvent, setSelectedEvent] = useState('');
     const [lastCreatedEvent, setLastCreatedEvent] = useState(null);
     const [newProblemDescription, setNewProblemDescription] = useState('');
     const [selectedProblemName, setSelectedProblemName] = useState('');
@@ -23,29 +24,23 @@ function AdminPanel() {
     const [assignmentSuccess, setAssignmentSuccess] = useState(false);
     const [assignmentError, setAssignmentError] = useState('');
     const [userCounts, setUserCounts] = useState({});
-    const [isActiveProblem, setIsActiveProblem] = useState(true);
     const [activeEvents, setActiveEvents] = useState([]);
 
+    const fetchActiveEvents = async () => {
+        try {
+          // Fetch all events
+          const eventsQuery = query(collection(db, 'events'));
+          const eventsSnapshot = await getDocs(eventsQuery);
+          const allEvents = eventsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+  
+          // Filter active events
+          const activeEvents = allEvents.filter(event => event.isActiveEvent);
 
-    useEffect(() => {
-        const fetchEvents = async () => {
-          try {
-            // Fetch all events
-            const eventsQuery = query(collection(db, 'events'));
-            const eventsSnapshot = await getDocs(eventsQuery);
-            const allEvents = eventsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-    
-            // Filter active events
-            const activeEvents = allEvents.filter(event => event.isActiveEvent);
-
-            setActiveEvents(activeEvents);
-          } catch (error) {
-            console.error('Error fetching events:', error);
-          }
-        };
-    
-        fetchEvents();
-      }, []); 
+          setActiveEvents(activeEvents);
+        } catch (error) {
+          console.error('Error fetching events:', error);
+        }
+    };
 
     // Function to add a new event
     const addNewEvent = async () => {
@@ -74,6 +69,10 @@ function AdminPanel() {
                 ...doc.data(),
             }));
             setEvents(updatedEventsData);
+
+            setTimeout(() => {
+                fetchActiveEvents();
+            }, 1000);
     
             console.log('New event added:', newEventDocRef.id);
         } catch (error) {
@@ -88,9 +87,9 @@ function AdminPanel() {
                 return;
             }
             const userId = uuidv4();
-    
             // Add the new problem to the current event with teamLeaderId as an empty string and isActive as true
             const eventDocRef = doc(db, 'events', lastCreatedEvent.id);
+            
             // Fetch existing participants
 
             // Add the new participant
@@ -199,32 +198,34 @@ function AdminPanel() {
                 chosenProblem.teamLeaderId = chosenUser.id;
 
                 const rb = getDatabase();
-
                 // Reference to the new problem node under the root
                 const newProblemRef = ref(rb, chosenProblem.id);
+                const newProblemSnapshot = await get(newProblemRef);
+                let FsEventId = newProblemSnapshot.val().eventID;
 
                 // Update only the teamLeaderId property of the existing chosenProblem
                 update(newProblemRef, {
-                ['teamLeaderId']: chosenUser.id,
+                    ['teamLeaderId']: chosenUser.id,
                 });
                     
-                // Update Firestore with the new team leader
-                const eventsCollection = collection(db, 'events');
-                const eventsSnapshot = await getDocs(eventsCollection);
-      
-                eventsSnapshot.forEach(async (doc) => {
-                  const eventData = doc.data();
-                  const eventProblems = eventData.problems || [];
-      
-                  // Update the chosen problem inside the problems array
-                  const updatedProblems = eventProblems.map((problem) =>
-                    problem.name === selectedProblemName ? chosenProblem : problem
-                  );
-      
-                  // Update Firestore with the new team leader
-                  await updateDoc(doc.ref, { problems: updatedProblems });
-                });
-            
+                const eventsCollection = doc(db, 'events', FsEventId);
+                const eventsSnapshot = await getDoc(eventsCollection);
+
+                if (eventsSnapshot.exists()) {
+                    const eventData = eventsSnapshot.data();
+                    const eventProblems = eventData.problems || [];
+
+                    // Update the chosen problem inside the problems array
+                    const updatedProblems = eventProblems.map((problem) =>
+                        problem.name === selectedProblemName ? chosenProblem : problem
+                    );
+
+                    // Update Firestore with the new team leader
+                    await updateDoc(eventsCollection, { problems: updatedProblems });
+                } else {
+                    console.log('Event not found');
+                }
+    
                 // Set the success message
                 setAssignmentSuccess(true);
 
@@ -279,9 +280,9 @@ function AdminPanel() {
 
     useEffect(() => {
         fetchEvents();
+        fetchActiveEvents();
     }, []);
       
- 
     const handleUserCountsChange = (snapshot) => { 
         const data = snapshot.val();
         // Ensure data exists
@@ -362,59 +363,7 @@ function AdminPanel() {
 
                         setTimeout(() => {
                             fetchEvents();
-                          }, 1000);
-
-                    } 
-                    pCount = 0;  
-                }
-            }, 1000);
-        }
-    }
-
-    const handleActiveEventList = async (snapshot) => {
-        const data = snapshot.val();
-        console.log("data: " + JSON.stringify(data));
-        // Ensure data exists and has the necessary properties
-        const eventId = data.eventID;
-        const isActive = data.isActive;
-
-        if (!isActive) {
-            // Call the eventId event from the Firestore database
-            console.log(`Event ${eventId} isActive changed to ${isActive}`);
-
-            setTimeout(async () => {
-                // Retrieve the current event data
-                const eventRef = doc(db, 'events', eventId);
-                const eventDoc = await getDoc(eventRef);
-
-                if (!eventDoc.exists()) {
-                    console.log('Event not found');
-                    return;
-                }
-                
-                if (eventDoc.exists()) {
-                    const problems =  eventDoc.data().problems;
-                    let pCount = 0;
-                    console.log("problems.length: " + problems.length);
-                    
-                    problems.forEach((item) => { 
-                        console.log("item: " + JSON.stringify(item));  
-                        if (item.isActive) {
-                            console.log("Problem " + item.name + " is active");
-                            return; // Exit the current function
-                        }
-                        else pCount++;       
-                    });
-
-                    console.log("pCount: " + pCount);
-                    if (pCount == problems.length) {
-                        // Update the isActiveEvent property of the existing event
-                        updateDoc(eventRef, {
-                            ['isActiveEvent']: false,
-                        });
-
-                        setTimeout(() => {
-                            fetchEvents();
+                            fetchActiveEvents();
                           }, 1000);
 
                     } 
@@ -429,8 +378,11 @@ function AdminPanel() {
         // Point the reference to the root
         const rootRef = ref(rb); 
         const unsubscribe = onChildChanged(rootRef, (snapshot) => {
-            // Handle the change
-            handleIsEventActive(snapshot);
+            setTimeout(() => {
+                // Handle the change
+                fetchEvents();
+                handleIsEventActive(snapshot);
+            }, 500);
         });
         return () => {
           // Cleanup the listener when the component unmounts
@@ -455,6 +407,21 @@ function AdminPanel() {
         }
     };
 
+    const handleSelectedEventChange = (event) => {
+        setSelectedEvent(event.target.value);
+    };
+
+    const handleSelectedEvent = async () => {
+        const newEventDoc = doc(db, 'events', selectedEvent); 
+        const newEventSnapshot = await getDoc(newEventDoc);
+
+        const chosenEvent = {
+            id: newEventSnapshot.id,
+            ...newEventSnapshot.data(),
+        };
+        setLastCreatedEvent(chosenEvent);
+    };
+
     return (
         <div>
         {/* Sign Out Button */}
@@ -473,13 +440,13 @@ function AdminPanel() {
             <div className="h-full overflow-y-auto mt-5 pb-10">
             {events.map((event) => (
                 <div key={event.id} className="mb-4">
-                <h2 className="text-md font-semibold text-red-950">{event.name}</h2>
+                <h2 className="text-md font-bold text-red-950">{event.name}</h2>
 
                 {/* Render problems inside the event */}
                 <div className="ml-4">
                     {Array.isArray(event.problems) && event.problems?.map((problem) => (
                     <div key={problem.name} className="mb-2">
-                        <h3 className="text-md ">{problem.name}</h3>
+                        <h3 className="text-md font-semibold text-red-950 ">{problem.name}</h3>
                         {/* Display participant names */}
                         <p>
                         <strong>Participants:</strong>{' '}
@@ -519,17 +486,30 @@ function AdminPanel() {
             {/* Main Content */}
             <div className="flex flex-col justify-between w-[444px] bg-white p-4 mx-10 " style={{height: "calc(100vh - 60px)"}}>
                 <div className="flex justify-center items-center">
-                    <label htmlFor="eventDropdown">Select an event:</label>
-                    <select id="eventDropdown">
+                    <select className='border rounded py-2 px-4' id="eventDropdown"
+                        value={selectedEvent}
+                        onChange={handleSelectedEventChange}
+                    >
+                        <option value="" disabled hidden>
+                            Active Events
+                        </option>
                         {activeEvents.map(event => (
                         <option key={event.id} value={event.id}>
                             {event.name}
                         </option>
                         ))}
                     </select>
+                    <button
+                        className="bg-red-950 bg-opacity-95 text-white py-2 px-4 rounded hover:bg-red-950 ml-2"
+                        disabled={!selectedEvent.trim()}
+                        onClick={handleSelectedEvent}
+                    >
+                        Select Event
+                    </button>
                 </div>
+
                 {/* Button to add a new event */}
-                <div className="mt-4">
+                <div className="flex justify-center items-center">
                     <input
                         type="text"
                         placeholder="Enter new event name"
