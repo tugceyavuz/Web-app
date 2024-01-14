@@ -179,6 +179,7 @@ function VotePage() {
   
         if (snapshot.exists()) {
           // Update the isActive field to false
+          
           await update(problemRef, {
             isActive: false,
             isVoteActive: false,

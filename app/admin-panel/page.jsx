@@ -3,8 +3,8 @@ import React from 'react';
 import {app} from '/firebase/config';
 import { getAuth, onAuthStateChanged } from "firebase/auth";
 import { useState, useEffect } from 'react';
-import { addDoc, collection, updateDoc, getDocs, doc, getDoc,arrayUnion } from 'firebase/firestore';
-import { set, ref, push, update, getDatabase, get, setDoc, onValue } from 'firebase/database';
+import { addDoc, collection, updateDoc, getDocs, doc, getDoc, arrayUnion, where, query } from 'firebase/firestore';
+import { set, ref, push, update, getDatabase, get, setDoc, onValue, onChildChanged } from 'firebase/database';
 import { db } from '/firebase/config';
 import { v4 as uuidv4 } from 'uuid';
 
@@ -24,6 +24,28 @@ function AdminPanel() {
     const [assignmentError, setAssignmentError] = useState('');
     const [userCounts, setUserCounts] = useState({});
     const [isActiveProblem, setIsActiveProblem] = useState(true);
+    const [activeEvents, setActiveEvents] = useState([]);
+
+
+    useEffect(() => {
+        const fetchEvents = async () => {
+          try {
+            // Fetch all events
+            const eventsQuery = query(collection(db, 'events'));
+            const eventsSnapshot = await getDocs(eventsQuery);
+            const allEvents = eventsSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    
+            // Filter active events
+            const activeEvents = allEvents.filter(event => event.isActiveEvent);
+
+            setActiveEvents(activeEvents);
+          } catch (error) {
+            console.error('Error fetching events:', error);
+          }
+        };
+    
+        fetchEvents();
+      }, []); 
 
     // Function to add a new event
     const addNewEvent = async () => {
@@ -226,7 +248,6 @@ function AdminPanel() {
           alert('An error occurred while updating Firestore.');
         }
     };
-      
 
     useEffect(() => {
         const unsubscribe = onAuthStateChanged(auth, (user) => {
@@ -297,52 +318,125 @@ function AdminPanel() {
     }, [userCounts]);
 
 
-    const handleIsEventActive = (snapshot) => {
+    const handleIsEventActive = async (snapshot) => {
         const data = snapshot.val();
+
         // Ensure data exists and has the necessary properties
-        Object.keys(data).forEach((problemKey) => {
-            const eventId = data[problemKey]?.eventID;
-            const isActive = data[problemKey]?.isActive;
+        const eventId = data.eventID;
+        const isActive = data.isActive;
 
-            if (isActive !== isActiveProblem) {
-                // Call the eventId event from the Firestore database
+        if (!isActive) {
+            // Call the eventId event from the Firestore database
+            console.log(`Event ${eventId} isActive changed to ${isActive}`);
 
-                console.log(`Event ${eventId} isActive changed to ${isActive}`);
+            setTimeout(async () => {
+                // Retrieve the current event data
+                const eventRef = doc(db, 'events', eventId);
+                const eventDoc = await getDoc(eventRef);
 
-                const docRef = doc(db, 'events', eventId);
-                const eventSnapshot = getDoc(docRef);
-            
-                if (eventSnapshot.exists()) {
-                    const problems = eventSnapshot.data().problems;
-                    let pCount = problems.length;
-
-                    eventSnapshot.data().problems.forEach((item) => {
+                if (!eventDoc.exists()) {
+                    console.log('Event not found');
+                    return;
+                }
+                
+                if (eventDoc.exists()) {
+                    const problems =  eventDoc.data().problems;
+                    let pCount = 0;
+                    console.log("problems.length: " + problems.length);
+                    
+                    problems.forEach((item) => { 
+                        console.log("item: " + JSON.stringify(item));  
                         if (item.isActive) {
+                            console.log("Problem " + item.name + " is active");
                             return; // Exit the current function
                         }
-                        pCount--;
-                        if (pCount === 0) {
-                            // Update the isActiveEvent property of the existing event
-                            updateDoc(docRef, {
-                                ['isActiveEvent']: false,
-                            });
-                        }
+                        else pCount++;       
                     });
+
+                    console.log("pCount: " + pCount);
+                    if (pCount == problems.length) {
+                        // Update the isActiveEvent property of the existing event
+                        updateDoc(eventRef, {
+                            ['isActiveEvent']: false,
+                        });
+
+                        setTimeout(() => {
+                            fetchEvents();
+                          }, 1000);
+
+                    } 
+                    pCount = 0;  
                 }
-            }
-        });
+            }, 1000);
+        }
+    }
+
+    const handleActiveEventList = async (snapshot) => {
+        const data = snapshot.val();
+        console.log("data: " + JSON.stringify(data));
+        // Ensure data exists and has the necessary properties
+        const eventId = data.eventID;
+        const isActive = data.isActive;
+
+        if (!isActive) {
+            // Call the eventId event from the Firestore database
+            console.log(`Event ${eventId} isActive changed to ${isActive}`);
+
+            setTimeout(async () => {
+                // Retrieve the current event data
+                const eventRef = doc(db, 'events', eventId);
+                const eventDoc = await getDoc(eventRef);
+
+                if (!eventDoc.exists()) {
+                    console.log('Event not found');
+                    return;
+                }
+                
+                if (eventDoc.exists()) {
+                    const problems =  eventDoc.data().problems;
+                    let pCount = 0;
+                    console.log("problems.length: " + problems.length);
+                    
+                    problems.forEach((item) => { 
+                        console.log("item: " + JSON.stringify(item));  
+                        if (item.isActive) {
+                            console.log("Problem " + item.name + " is active");
+                            return; // Exit the current function
+                        }
+                        else pCount++;       
+                    });
+
+                    console.log("pCount: " + pCount);
+                    if (pCount == problems.length) {
+                        // Update the isActiveEvent property of the existing event
+                        updateDoc(eventRef, {
+                            ['isActiveEvent']: false,
+                        });
+
+                        setTimeout(() => {
+                            fetchEvents();
+                          }, 1000);
+
+                    } 
+                    pCount = 0;  
+                }
+            }, 1000);
+        }
     }
 
     useEffect(() => {
         const rb = getDatabase();
         // Point the reference to the root
         const rootRef = ref(rb); 
-        const unsubscribe = onValue(rootRef, handleIsEventActive);
+        const unsubscribe = onChildChanged(rootRef, (snapshot) => {
+            // Handle the change
+            handleIsEventActive(snapshot);
+        });
         return () => {
           // Cleanup the listener when the component unmounts
           unsubscribe();
         };
-    }, [isActiveProblem]);
+    }, []);
 
     
     useEffect(() => {
@@ -424,6 +518,16 @@ function AdminPanel() {
 
             {/* Main Content */}
             <div className="flex flex-col justify-between w-[444px] bg-white p-4 mx-10 " style={{height: "calc(100vh - 60px)"}}>
+                <div className="flex justify-center items-center">
+                    <label htmlFor="eventDropdown">Select an event:</label>
+                    <select id="eventDropdown">
+                        {activeEvents.map(event => (
+                        <option key={event.id} value={event.id}>
+                            {event.name}
+                        </option>
+                        ))}
+                    </select>
+                </div>
                 {/* Button to add a new event */}
                 <div className="mt-4">
                     <input
