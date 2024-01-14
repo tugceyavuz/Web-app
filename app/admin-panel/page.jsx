@@ -23,12 +23,14 @@ function AdminPanel() {
     const [assignmentSuccess, setAssignmentSuccess] = useState(false);
     const [assignmentError, setAssignmentError] = useState('');
     const [userCounts, setUserCounts] = useState({});
+    const [isActiveProblem, setIsActiveProblem] = useState(true);
 
     // Function to add a new event
     const addNewEvent = async () => {
         try {
             const eventsCollection = collection(db, 'events');
             const newEventDocRef = await addDoc(eventsCollection, {
+                isActiveEvent: true,
                 name: newEventName,
                 problems: [],
             });
@@ -294,6 +296,54 @@ function AdminPanel() {
         };
     }, [userCounts]);
 
+
+    const handleIsEventActive = (snapshot) => {
+        const data = snapshot.val();
+        // Ensure data exists and has the necessary properties
+        Object.keys(data).forEach((problemKey) => {
+            const eventId = data[problemKey]?.eventID;
+            const isActive = data[problemKey]?.isActive;
+
+            if (isActive !== isActiveProblem) {
+                // Call the eventId event from the Firestore database
+
+                console.log(`Event ${eventId} isActive changed to ${isActive}`);
+
+                const docRef = doc(db, 'events', eventId);
+                const eventSnapshot = getDoc(docRef);
+            
+                if (eventSnapshot.exists()) {
+                    const problems = eventSnapshot.data().problems;
+                    let pCount = problems.length;
+
+                    eventSnapshot.data().problems.forEach((item) => {
+                        if (item.isActive) {
+                            return; // Exit the current function
+                        }
+                        pCount--;
+                        if (pCount === 0) {
+                            // Update the isActiveEvent property of the existing event
+                            updateDoc(docRef, {
+                                ['isActiveEvent']: false,
+                            });
+                        }
+                    });
+                }
+            }
+        });
+    }
+
+    useEffect(() => {
+        const rb = getDatabase();
+        // Point the reference to the root
+        const rootRef = ref(rb); 
+        const unsubscribe = onValue(rootRef, handleIsEventActive);
+        return () => {
+          // Cleanup the listener when the component unmounts
+          unsubscribe();
+        };
+    }, [isActiveProblem]);
+
     
     useEffect(() => {
         fetchEvents();
@@ -436,7 +486,7 @@ function AdminPanel() {
                     {/* Display active problems and their participant lists */}
                     {events.map((event) => (
                         <div key={event.id} className="mb-4">
-                            <h3 className="text-md font-semibold text-red-950">{event.name}</h3>
+                            {event.isActiveEvent && <h3 className="text-md font-semibold text-red-950">{event.name}</h3>}
                             <div className="ml-4">
                                 {Array.isArray(event.problems) && event.problems?.filter((problem) => problem.isActive)
                                     .map((activeProblem) => (
