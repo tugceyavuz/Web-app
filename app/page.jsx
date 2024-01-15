@@ -146,48 +146,55 @@ const Home = () => {
     }
   };
 
+  const goSingIn = () => {
+    router.push('/signin');
+  };
+
   return (
-    <section className="w-full flex-center flex-col h-screen">  
-      {/* Dropdown list for "problemler" */}
-      <div className="text-center mb-4">
-        <select
-          id="problemDropdown"
-          value={selectedProblem}
-          onChange={handleProblemChange}
-          className="w-80 p-3 border rounded focus:outline-none"
-        >
-          <option value="" disabled hidden>
-            PROBLEMS
-          </option>
-          {problemOptions.map((option, index) => (
-            <option key={index} value={option}>
-              {option}
+    <section className='h-screen w-screen'>
+      <button className='bg-[#440807] bg-opacity-95 flex-center text-white rounded mx-5 p-1' onClick={goSingIn}>Admin Sign In</button>
+      <section className="w-full flex-center flex-col h-screen">      
+        {/* Dropdown list for "problemler" */}
+        <div className="text-center mb-4">
+          <select
+            id="problemDropdown"
+            value={selectedProblem}
+            onChange={handleProblemChange}
+            className="w-80 p-3 border rounded focus:outline-none"
+          >
+            <option value="" disabled hidden>
+              PROBLEMS
             </option>
-          ))}
-        </select>
-      </div>
+            {problemOptions.map((option, index) => (
+              <option key={index} value={option}>
+                {option}
+              </option>
+            ))}
+          </select>
+        </div>
 
-      {/* Interactable textbox for "isim" */}
-      <div className="text-center mb-4">
-        <input
-          type="text"
-          id="isimInput"
-          value={isim}
-          onChange={handleIsimChange}
-          className="w-80 p-3 border rounded focus:outline-none"
-          placeholder="KATILIMCI İSMİ"
-        />
-      </div>
+        {/* Interactable textbox for "isim" */}
+        <div className="text-center mb-4">
+          <input
+            type="text"
+            id="isimInput"
+            value={isim}
+            onChange={handleIsimChange}
+            className="w-80 p-3 border rounded focus:outline-none"
+            placeholder="KATILIMCI İSMİ"
+          />
+        </div>
 
-      {/* Join button */}
-      <button
-        type="submit"
-        className={`bg-[#440807] bg-opacity-95 text-white py-2 px-4 rounded hover:bg-red-950 bg-opacity-95 ${isButtonDisabled ? 'cursor-not-allowed opacity-50' : ''}`}
-        onClick={handleJoinClick}
-        disabled={isButtonDisabled}
-      >
-        JOIN
-      </button>
+        {/* Join button */}
+        <button
+          type="submit"
+          className={`bg-[#440807] bg-opacity-95 text-white py-2 px-4 rounded hover:bg-red-950 bg-opacity-95 ${isButtonDisabled ? 'cursor-not-allowed opacity-50' : ''}`}
+          onClick={handleJoinClick}
+          disabled={isButtonDisabled}
+        >
+          JOIN
+        </button>
+      </section>
     </section>
   );
 };
