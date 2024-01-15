@@ -460,7 +460,7 @@ function TlMeeting() {
 
         {/* Button 2 */}
         <button className="mb-5 p-2 w-[160px] h-[80px] bg-red-900 text-white rounded hover:bg-red-600"
-          //disabled={isButtonDisabled}
+          disabled={isButtonDisabled}
           onClick={handlePageChange}
         >
           Change Pages
@@ -468,7 +468,7 @@ function TlMeeting() {
 
         {/* Button 3 */}
         <button className="mb-5 p-2 w-[160px] h-[80px] bg-red-900 text-white rounded hover:bg-red-600"
-          //disabled={isButtonDisabled}
+          disabled={isButtonDisabled}
           onClick={() => {router.push('/TL-editor');}}
         >
           End Process / Go to Editing
@@ -512,8 +512,8 @@ function TlMeeting() {
 
           {/* Button to update display text */}
           <button
-            className={`bg-red-950 bg-opacity-95 text-white py-1 px-4 rounded hover:bg-red-950 ml-2 ${buttonClicked ? 'cursor-not-allowed opacity-50' : ''}`}
-            disabled={!inputText.trim() && countdown == 5*60}
+            className={`bg-red-950 bg-opacity-95 text-white py-1 px-4 rounded hover:bg-red-950 ml-2 ${buttonClicked || countdown == 5*60? 'cursor-not-allowed opacity-50' : ''}`}
+            disabled={!inputText.trim() || countdown == 5*60}
             onClick={(e) => {
               e.preventDefault();
               if (!buttonClicked) {

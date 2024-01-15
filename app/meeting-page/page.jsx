@@ -327,8 +327,8 @@ function Meeting() {
 
         {/* Button to save */}
         <button
-            className={`bg-red-950 bg-opacity-95 text-white py-1 px-4 rounded hover:bg-red-950 ml-2 ${buttonClicked ? 'cursor-not-allowed opacity-50' : ''}`}
-            disabled={!inputText.trim()}
+            className={`bg-red-950 bg-opacity-95 text-white py-1 px-4 rounded hover:bg-red-950 ml-2 ${buttonClicked || countdown == 5*60 ? 'cursor-not-allowed opacity-50' : ''}`}
+            disabled={!inputText.trim() || countdown == 5*60}
             onClick={(e) => {
               e.preventDefault();
               if (!buttonClicked) {
