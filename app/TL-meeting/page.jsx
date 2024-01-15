@@ -254,7 +254,7 @@ function TlMeeting() {
   };
   
   useEffect(() => {
-    if (problemData) {
+    if (problemData) {   
       console.log(problemData.context);
       const newGptInput = "write 3 short solution with maximum 3 sentence for each, for problem: " + problemData.context;
       setGptInput(newGptInput);
@@ -262,12 +262,36 @@ function TlMeeting() {
     }
   }, [problemData]);
 
-  useEffect(() => {
+  const gptInputDetector = async () => {
+      const docRef = doc(db, 'events', eventId);
+      const eventSnapshot = await getDoc(docRef);
+  
+      eventSnapshot.data().problems.forEach((item) => {
+
+        if (item.id == selectedProblem) {
+          const participantData = item.partipicant.find((participant) => participant.name === "GPT");
+  
+          if (participantData) {
+            // Assuming 'pages' is an array inside 'partipicant'
+            const pagesData = participantData.pages || [];
+            const combinedText = pagesData
+                .map((page) => page.textVal)
+                .join(',');
+              
+            console.log(combinedText);
+            const newGptInput = "write 3 short solution with maximum 3 sentence for each, for problem: " + problemData.context + " and consider (if meanengless, ignore this): " + combinedText;
+            setGptInput(newGptInput);
+            console.log(newGptInput); // Log the updated value here    
+          } else {
+            console.error('Participant not found in selected problem.');
+          }
+        }
+      }); 
+  }
+
+  useEffect( () => {
     if (problemData) {
-      console.log(problemData.context);
-      const newGptInput = "write 3 short solution with maximum 3 sentence for each, for problem: " + problemData.context + " and consider (if meanengless, ignore this): " + GptInput2;
-      setGptInput(newGptInput);
-      console.log(newGptInput); // Log the updated value here
+      gptInputDetector();
     }
   }, [GptInput2]);
 
@@ -438,7 +462,7 @@ function TlMeeting() {
 
         {/* Button 2 */}
         <button className="mb-5 p-2 w-[160px] h-[80px] bg-red-900 text-white rounded hover:bg-red-600"
-          disabled={isButtonDisabled}
+          //disabled={isButtonDisabled}
           onClick={handlePageChange}
         >
           Change Pages
@@ -491,7 +515,7 @@ function TlMeeting() {
           {/* Button to update display text */}
           <button
             className={`bg-red-950 bg-opacity-95 text-white py-1 px-4 rounded hover:bg-red-950 ml-2 ${buttonClicked ? 'cursor-not-allowed opacity-50' : ''}`}
-            disabled={!inputText.trim()}
+            disabled={!inputText.trim() && countdown == 5*60}
             onClick={(e) => {
               e.preventDefault();
               if (!buttonClicked) {
