@@ -278,10 +278,8 @@ function TlMeeting() {
                 .map((page) => page.textVal)
                 .join(',');
               
-            console.log(combinedText);
             const newGptInput = "write 3 short solution with maximum 3 sentence for each, for problem: " + problemData.context + " and consider (if meanengless, ignore this): " + combinedText;
-            setGptInput(newGptInput);
-            console.log(newGptInput); // Log the updated value here    
+            setGptInput(newGptInput);  
           } else {
             console.error('Participant not found in selected problem.');
           }
