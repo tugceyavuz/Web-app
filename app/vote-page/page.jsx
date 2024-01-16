@@ -54,21 +54,23 @@ function VotePage() {
 
   const fetchProblemData = async () => {
     try {
-      const docRef = doc(db, 'events', eventId);
-      const eventSnapshot = await getDoc(docRef);
+      if(eventId){
+        const docRef = doc(db, 'events', eventId);
+        const eventSnapshot = await getDoc(docRef);
 
-      if (eventSnapshot.exists()) {
-        const problems = eventSnapshot.data().problems;
-        const selectedProblemData = problems.find((item) => item.id === selectedProblem);
+        if (eventSnapshot.exists()) {
+          const problems = eventSnapshot.data().problems;
+          const selectedProblemData = problems.find((item) => item.id === selectedProblem);
 
-        if (selectedProblemData) {
-          setProblemData(selectedProblemData);
-          setPollOptions(selectedProblemData.poll);
+          if (selectedProblemData) {
+            setProblemData(selectedProblemData);
+            setPollOptions(selectedProblemData.poll);
+          } else {
+            console.error('Selected problem not found in events collection.');
+          }
         } else {
-          console.error('Selected problem not found in events collection.');
+          console.error('Event document does not exist.');
         }
-      } else {
-        console.error('Event document does not exist.');
       }
     } catch (error) {
       console.error('Error fetching problem data:', error);
@@ -134,7 +136,7 @@ function VotePage() {
           const selectedProblemData = problems.find((item) => item.id === selectedProblem);
     
           if (selectedProblemData) {
-            const updatedPollOptions = selectedProblemData.poll.map(option => {
+            const updatedPollOptions = selectedProblemData.poll.map(option => {      
               if (values.selectedOptions.includes(option.name)) {
                 // Increment the vote count for the selected option
                 return { ...option, vote: (option.vote || 0) + 1 };
@@ -143,18 +145,26 @@ function VotePage() {
             });
     
             // Update the poll array with the new vote count in the Firestore database
+            console.log('Before Firestore update:', problems);
             await updateDoc(docRef, {
               problems: problems.map(problem => {
                 if (problem.id === selectedProblem) {
+                  console.log('updatedPollOptions', updatedPollOptions);
                   return { ...problem, poll: updatedPollOptions };
                 }
                 return problem;
               })
             });
+            console.log('After Firestore update. Refreshing data...');
+            
+            // Query the data again after the update
+            const updatedDoc = await getDoc(docRef);
+            const updatedProblems = updatedDoc.data().problems;
+            console.log('After Firestore update:', updatedProblems);
+            
+            
     
             console.log('Votes incremented successfully.');
-    
-            // Additional logic as needed
     
           } else {
             console.error('Selected problem not found in events collection.');
@@ -210,9 +220,7 @@ function VotePage() {
           // Update the entire array within the event document
           await updateDoc(eventRef, { problems: updatedProblems });
 
-          setTimeout(() => {
-            router.push('/end');
-          }, 500);
+
   
           console.log('Problem marked as finished.');
         } else {
@@ -318,7 +326,9 @@ function VotePage() {
               if (isTeamLeader) {
                 formik.handleSubmit(e);
                 console.log('Team Leader Action');
-                setFinished();
+                setTimeout(() => {
+                  setFinished();
+                }, 500);
               } else {
                 formik.handleSubmit(e);
               }
