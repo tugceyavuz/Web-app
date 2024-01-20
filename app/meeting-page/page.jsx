@@ -10,6 +10,7 @@ import { Alert } from '@mui/material';
 
 function Meeting() {
   const router = useRouter();
+  const timerAmount = 10;
   const [displayText, setDisplayText] = useState('');
   const [inputText, setInputText] = useState('');
   const [userId, setUserId] = useState('');
@@ -19,7 +20,7 @@ function Meeting() {
   const [teamLeaderId, setTeamLeaderId] = useState('');
   const [problemData, setProblemData] = useState(null);
   const [isVoteActive, setIsVoteActive] = useState(false);
-  const [countdown, setCountdown] = useState(5*60); 
+  const [countdown, setCountdown] = useState(timerAmount); 
   const [buttonClicked, setButtonClicked] = useState(false);
 
   const handleInputChange = (e) => {
@@ -239,7 +240,7 @@ function Meeting() {
                 clearInterval(countdownInterval);
 
                 // Reset the countdown locally
-                setCountdown(5*60);
+                setCountdown(timerAmount);
 
                 // Update the isCountdownActive value to false in the database
                 update(problemRef, {
@@ -252,7 +253,7 @@ function Meeting() {
         } else {
           // If isCountdownActive is false or undefined, reset the countdown
           clearInterval(countdownInterval);
-          setCountdown(5*60);
+          setCountdown(timerAmount);
         }
       });
 
@@ -327,8 +328,8 @@ function Meeting() {
 
         {/* Button to save */}
         <button
-            className={`bg-red-950 bg-opacity-95 text-white py-1 px-4 rounded hover:bg-red-950 ml-2 ${buttonClicked || countdown == 5*60 ? 'cursor-not-allowed opacity-50' : ''}`}
-            disabled={!inputText.trim() || countdown == 5*60}
+            className={`bg-red-950 bg-opacity-95 text-white py-1 px-4 rounded hover:bg-red-950 ml-2 ${buttonClicked || countdown == timerAmount ? 'cursor-not-allowed opacity-50' : ''}`}
+            disabled={!inputText.trim() || countdown == timerAmount}
             onClick={(e) => {
               e.preventDefault();
               if (!buttonClicked) {

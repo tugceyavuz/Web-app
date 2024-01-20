@@ -11,6 +11,7 @@ import axios from 'axios';
 
 function TlMeeting() {
   const router = useRouter();
+  const timerAmount = 10;
   const [displayText, setDisplayText] = useState('');
   const [GptInput2, setGptInput2] = useState('')
   const [inputText, setInputText] = useState('');
@@ -19,7 +20,7 @@ function TlMeeting() {
   const [eventId, setEventId] = useState('');
   const [count, setCount] = useState(0);
   const [problemData, setProblemData] = useState(null);
-  const [countdown, setCountdown] = useState(5*60); 
+  const [countdown, setCountdown] = useState(timerAmount); 
   const [GptInput, setGptInput] = useState('');
   const [buttonClicked, setButtonClicked] = useState(false);
   const [isButtonDisabled, setIsButtonDisabled] = useState(false);
@@ -310,6 +311,7 @@ function TlMeeting() {
         // Ensure data exists and isCountdownActive is explicitly true
         if (data !== null && data.isCountdownActive && countdown > 0) {
           setIsButtonDisabled(true);
+          console.log('Countdown started: ' + isButtonDisabled);
           // Start the countdown
           countdownInterval = setInterval(() => {
             setCountdown((prevCountdown) => {
@@ -317,13 +319,14 @@ function TlMeeting() {
                 clearInterval(countdownInterval);
 
                 // Reset the countdown locally
-                setCountdown(5*60);
+                setCountdown(timerAmount);
 
                 // Update the isCountdownActive value to false in the database
                 update(problemRef, {
                   isCountdownActive: false,
                 });
-
+                console.log('Countdown started: ' + isButtonDisabled);
+                console.log('countdown countdown: ' + countdown);
                 setIsButtonDisabled(false);
               }
               return prevCountdown - 1;
@@ -332,7 +335,7 @@ function TlMeeting() {
         } else {
           // If isCountdownActive is false or undefined, reset the countdown
           clearInterval(countdownInterval);
-          setCountdown(5*60);
+          setCountdown(timerAmount);
         }
       });
 
@@ -512,8 +515,8 @@ function TlMeeting() {
 
           {/* Button to update display text */}
           <button
-            className={`bg-red-950 bg-opacity-95 text-white py-1 px-4 rounded hover:bg-red-950 ml-2 ${buttonClicked || countdown == 5*60? 'cursor-not-allowed opacity-50' : ''}`}
-            disabled={!inputText.trim() || countdown == 5*60}
+            className={`bg-red-950 bg-opacity-95 text-white py-1 px-4 rounded hover:bg-red-950 ml-2 ${buttonClicked || countdown == timerAmount? 'cursor-not-allowed opacity-50' : ''}`}
+            disabled={!inputText.trim() || countdown == timerAmount}
             onClick={(e) => {
               e.preventDefault();
               if (!buttonClicked) {
