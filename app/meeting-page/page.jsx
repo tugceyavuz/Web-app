@@ -10,7 +10,7 @@ import { Alert } from '@mui/material';
 
 function Meeting() {
   const router = useRouter();
-  const timerAmount = 20;
+  const timerAmount = 60;
   const [displayText, setDisplayText] = useState('');
   const [inputText, setInputText] = useState('');
   const [userId, setUserId] = useState('');
