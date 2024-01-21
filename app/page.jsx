@@ -32,10 +32,10 @@ const Home = () => {
 
           // Check if the problem is active
           if (problem.isActive && problem.userCount <= 6) {
-            const problemName = problem.name; // Assuming each problem has a 'name' property
-
+            const problemN = {name : problem.name, id: problem.id}; // Assuming each problem has a 'name' property
+            
             // Add the problem name to the problems array
-            problems.push(problemName);
+            problems.push(problemN);
           }
         });
 
@@ -84,7 +84,7 @@ const Home = () => {
         const eventProblems = eventData.problems || [];
   
         // Find the chosen problem by name
-        const chosenProblemIndex = eventProblems.findIndex((problem) => problem.name === selectedProblem);
+        const chosenProblemIndex = eventProblems.findIndex((problem) => problem.id === selectedProblem);
   
         if (chosenProblemIndex !== -1) {
           // Chosen problem exists, check if participants array exists
@@ -166,8 +166,8 @@ const Home = () => {
               PROBLEMS
             </option>
             {problemOptions.map((option, index) => (
-              <option key={index} value={option}>
-                {option}
+              <option key={index} value={option.id}>
+                {option.name}
               </option>
             ))}
           </select>
