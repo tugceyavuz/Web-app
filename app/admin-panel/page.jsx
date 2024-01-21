@@ -677,7 +677,7 @@ function AdminPanel() {
                             ))}
                         </select>
                         <select className='border rounded py-2 px-2' id="eventDropdown"
-                            disabled={activeProblems.length == 0}
+                            disabled={activeProblems.length == 0 || activeEvents.length == 0}
                             value={selectedProblemId}
                             onChange={handleSelectedProblemChange}
                         >
