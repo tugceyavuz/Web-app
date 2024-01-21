@@ -106,8 +106,8 @@ function tlEditor() {
       await updateDoc(docRef, {
         problems: updatedProblems,
       });
-  
-      console.log('Poll options saved successfully.');
+
+      alert("Poll options saved successfully.")
     } catch (error) {
       console.error('Error saving poll options:', error);
     }

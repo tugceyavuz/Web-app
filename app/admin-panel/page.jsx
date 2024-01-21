@@ -17,14 +17,17 @@ function AdminPanel() {
     const [newEventName, setNewEventName] = useState('');
     const [newProblemName, setNewProblemName] = useState('');
     const [selectedEvent, setSelectedEvent] = useState('');
+    const [selectedEventDropdown, setSelectedEventDropdown] = useState('');
     const [lastCreatedEvent, setLastCreatedEvent] = useState(null);
     const [newProblemDescription, setNewProblemDescription] = useState('');
-    const [selectedProblemName, setSelectedProblemName] = useState('');
-    const [selectedUserName, setSelectedUserName] = useState('');
+    const [selectedProblemId, setSelectedProblemId] = useState('');
+    const [selectedUserId, setSelectedUserId] = useState('');
     const [assignmentSuccess, setAssignmentSuccess] = useState(false);
     const [assignmentError, setAssignmentError] = useState('');
     const [userCounts, setUserCounts] = useState({});
     const [activeEvents, setActiveEvents] = useState([]);
+    const [activeProblems, setActiveProblems] = useState([]);
+    const [activeUsers, setActiveUsers] = useState([]);
 
     const fetchActiveEvents = async () => {
         try {
@@ -37,6 +40,53 @@ function AdminPanel() {
           const activeEvents = allEvents.filter(event => event.isActiveEvent);
 
           setActiveEvents(activeEvents);
+        } catch (error) {
+          console.error('Error fetching events:', error);
+        }
+    };
+
+    const fetchActiveProblems = async (selectedEventDropdown) => {
+        try {
+            setSelectedEventDropdown(selectedEventDropdown);
+            if(selectedEventDropdown){    
+                const newEventDoc = doc(db, 'events', selectedEventDropdown); 
+                const newEventSnapshot = await getDoc(newEventDoc);
+                const eventData = newEventSnapshot.data();
+                const eventProblems = eventData.problems || [];
+                const newProblemsArray = [];
+                const newUsersArray = [];
+
+                eventProblems.forEach((item) => {
+                    if (item.isActive) {
+                        newProblemsArray.push(item);
+                    }
+                });
+
+                setActiveProblems(newProblemsArray);
+                setActiveUsers(newUsersArray);
+            }
+        } catch (error) {
+          console.error('Error fetching events:', error);
+        }
+    };
+
+    const fetchActiveUsers = async (selectedProblemId) => {
+        try {
+            setSelectedProblemId(selectedProblemId);
+            if(selectedEventDropdown){    
+                const newEventDoc = doc(db, 'events', selectedEventDropdown); 
+                const newEventSnapshot = await getDoc(newEventDoc);
+                const eventData = newEventSnapshot.data();
+                const eventProblems = eventData.problems || [];
+
+                eventProblems.forEach((item) => {
+                    if (item.id == selectedProblemId){
+                        const problemUsers = item.partipicant || [];
+                        setActiveUsers(problemUsers);
+                        return;
+                    }
+                });  
+            }
         } catch (error) {
           console.error('Error fetching events:', error);
         }
@@ -174,72 +224,78 @@ function AdminPanel() {
 
     const handleAssignTeamLeader = async () => {
         try {
-          // Validate that 'selectedProblemName' and 'selectedUserName' are not empty
-          if (!selectedProblemName || !selectedUserName) {
-            console.error('Invalid input: selectedProblemName and selectedUserName are required.');
+          // Validate that 'selectedProblemId' and 'selectedUserId' are not empty
+          if (!selectedProblemId || !selectedUserId) {
+            console.error('Invalid input: selectedProblemId and selectedUserId are required.');
             return;
           }
       
-          // Find the chosen problem by name
+          // Find the chosen problem
           const chosenProblemIndex = events.findIndex((event) =>
-            event.problems.some((problem) => problem.name === selectedProblemName)
+            event.problems.some((problem) => problem.id === selectedProblemId)
           );
       
           if (chosenProblemIndex !== -1) {
             // Chosen problem exists, check if participants array exists
-            const chosenProblem = events[chosenProblemIndex].problems.find((problem) => problem.name === selectedProblemName);
+            const chosenProblem = events[chosenProblemIndex].problems.find((problem) => problem.id === selectedProblemId);
       
             if (chosenProblem) {
-              // Find the chosen user by name
-              const chosenUser = chosenProblem.partipicant.find((participant) => participant.name === selectedUserName);
-      
-              if (chosenUser) {
-                // Update the teamLeaderId property inside the specified problem with the id of the chosen user
-                chosenProblem.teamLeaderId = chosenUser.id;
-
-                const rb = getDatabase();
-                // Reference to the new problem node under the root
-                const newProblemRef = ref(rb, chosenProblem.id);
-                const newProblemSnapshot = await get(newProblemRef);
-                let FsEventId = newProblemSnapshot.val().eventID;
-
-                // Update only the teamLeaderId property of the existing chosenProblem
-                update(newProblemRef, {
-                    ['teamLeaderId']: chosenUser.id,
-                });
-                    
-                const eventsCollection = doc(db, 'events', FsEventId);
-                const eventsSnapshot = await getDoc(eventsCollection);
-
-                if (eventsSnapshot.exists()) {
-                    const eventData = eventsSnapshot.data();
-                    const eventProblems = eventData.problems || [];
-
-                    // Update the chosen problem inside the problems array
-                    const updatedProblems = eventProblems.map((problem) =>
-                        problem.name === selectedProblemName ? chosenProblem : problem
-                    );
-
-                    // Update Firestore with the new team leader
-                    await updateDoc(eventsCollection, { problems: updatedProblems });
-                } else {
-                    console.log('Event not found');
+                // Find the chosen user by name
+                const chosenUser = chosenProblem.partipicant.find((participant) => participant.id === selectedUserId);
+                if(chosenUser.name == "GPT"){
+                    setAssignmentError('GPT cannot be assigned as team leader.');
+                    setTimeout(() => {
+                        setAssignmentError('');
+                    }, 1000);
+                    return;
                 }
-    
-                // Set the success message
-                setAssignmentSuccess(true);
+                if (chosenUser) {
+                    // Update the teamLeaderId property inside the specified problem with the id of the chosen user
+                    chosenProblem.teamLeaderId = selectedUserId;
 
-                // Clear the success message after a few seconds
-                setTimeout(() => {
-                    setAssignmentSuccess(false);
-                    setAssignmentError('');
-                }, 1000);
-              }else{
-                setAssignmentError('User not found in the selected problem.');
-                setTimeout(() => {
-                    setAssignmentError('');
-                }, 1000);
-            }
+                    const rb = getDatabase();
+                    // Reference to the new problem node under the root
+                    const newProblemRef = ref(rb, selectedProblemId);
+                    const newProblemSnapshot = await get(newProblemRef);
+                    let FsEventId = newProblemSnapshot.val().eventID;
+
+                    // Update only the teamLeaderId property of the existing chosenProblem
+                    update(newProblemRef, {
+                        ['teamLeaderId']: selectedUserId,
+                    });
+                        
+                    const eventsCollection = doc(db, 'events', FsEventId);
+                    const eventsSnapshot = await getDoc(eventsCollection);
+
+                    if (eventsSnapshot.exists()) {
+                        const eventData = eventsSnapshot.data();
+                        const eventProblems = eventData.problems || [];
+
+                        // Update the chosen problem inside the problems array
+                        const updatedProblems = eventProblems.map((problem) =>
+                            problem.name === selectedProblemId ? chosenProblem : problem
+                        );
+
+                        // Update Firestore with the new team leader
+                        await updateDoc(eventsCollection, { problems: updatedProblems });
+                    } else {
+                        console.log('Event not found');
+                    }
+        
+                    // Set the success message
+                    setAssignmentSuccess(true);
+
+                    // Clear the success message after a few seconds
+                    setTimeout(() => {
+                        setAssignmentSuccess(false);
+                        setAssignmentError('');
+                    }, 1000);
+                }else{
+                    setAssignmentError('User not found in the selected problem.');
+                    setTimeout(() => {
+                        setAssignmentError('');
+                    }, 1000);
+                }
             }
           }else {
             alert('Problem not found.');
@@ -327,8 +383,6 @@ function AdminPanel() {
         const isActive = data.isActive;
 
         if (!isActive) {
-            // Call the eventId event from the Firestore database
-            console.log(`Event ${eventId} isActive changed to ${isActive}`);
 
             setTimeout(async () => {
                 // Retrieve the current event data
@@ -409,6 +463,22 @@ function AdminPanel() {
 
     const handleSelectedEventChange = (event) => {
         setSelectedEvent(event.target.value);
+    };
+
+    const handleSelectedEventDropdownChange = (event) => {
+        setSelectedEventDropdown(event.target.value);
+        setSelectedProblemId('');
+        setTimeout(() => {fetchActiveProblems(event.target.value);}, 300);
+    };
+
+    const handleSelectedProblemChange = (problem) => {
+        setSelectedProblemId(problem.target.value);
+        setSelectedUserId('');
+        setTimeout(() => {fetchActiveUsers(problem.target.value);}, 300);
+    };
+
+    const handleSelectedUserChange = (user) => {
+        setSelectedUserId(user.target.value);
     };
 
     const handleSelectedEvent = async () => {
@@ -593,24 +663,53 @@ function AdminPanel() {
                 <div className="mt-4 absolute bottom-0">
                     {/* Button for Right Panel */}
                     <div>
-                        <input
-                            type="text"
-                            placeholder="Enter problem name"
-                            value={selectedProblemName}
-                            onChange={(e) => setSelectedProblemName(e.target.value)}
-                            className="border p-2 rounded"
-                        />
-                        <input
-                            type="text"
-                            placeholder="Enter user name"
-                            value={selectedUserName}
-                            onChange={(e) => setSelectedUserName(e.target.value)}
-                            className="border p-2 rounded"
-                        />
+                        <select className='border rounded py-2 px-4' id="eventDropdown"
+                            value={selectedEventDropdown}
+                            onChange={handleSelectedEventDropdownChange}
+                        >
+                            <option value="" disabled hidden>
+                                Active Events
+                            </option>
+                            {activeEvents.map(event => (
+                            <option key={event.id} value={event.id}>
+                                {event.name}
+                            </option>
+                            ))}
+                        </select>
+                        <select className='border rounded py-2 px-2' id="eventDropdown"
+                            disabled={activeProblems.length == 0}
+                            value={selectedProblemId}
+                            onChange={handleSelectedProblemChange}
+                        >
+                            <option value="" disabled hidden>
+                                Active Problems
+                            </option>
+                            {activeProblems.map(problem => (
+                            <option key={problem.id} value={problem.id}>
+                                {problem.name}
+                            </option>
+                            ))}
+                        </select>
+                        <select className='border rounded py-2 px-4' id="eventDropdown"
+                            disabled={activeUsers.length == 0 || activeProblems.length == 0}
+                            value={selectedUserId}
+                            onChange={handleSelectedUserChange}
+                        >
+                            <option value="" disabled hidden>
+                                Active Users
+                            </option>
+                            {activeUsers.map(user => (
+                            <option key={user.id} value={user.id}>
+                                {user.name}
+                            </option>
+                            ))}
+                        </select>
+                        
+                        </div>
                         <button
                             className={`bg-red-950 bg-opacity-95 text-white py-2 px-4 rounded hover:bg-red-950`}
                             onClick={handleAssignTeamLeader}
-                            disabled={!selectedProblemName.trim() || !selectedUserName.trim()}
+                            disabled={!selectedProblemId.trim() || !selectedUserId.trim()}
                         >
                             Assign Team Leader
                         </button>
@@ -623,7 +722,6 @@ function AdminPanel() {
                             {assignmentError}
                             </p>
                         )}
-                        </div>
                 </div>
             </div>
         </div>
