@@ -147,12 +147,12 @@ const Home = () => {
   };
 
   const goSingIn = () => {
-    router.push('/signin');
+    router.push('/login');
   };
 
   return (
     <section className='h-screen w-screen'>
-      <button className='bg-[#440807] bg-opacity-95 flex-center text-white rounded mx-5 p-1' onClick={goSingIn}>Admin Sign In</button>
+      <button className='bg-[#440807] bg-opacity-95 flex-center text-white rounded mx-5 p-1' onClick={goSingIn}>Admin Log In</button>
       <section className="w-full flex-center flex-col h-screen">      
         {/* Dropdown list for "problemler" */}
         <div className="text-center mb-4">

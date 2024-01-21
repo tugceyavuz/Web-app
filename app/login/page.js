@@ -40,7 +40,7 @@ function Page() {
       <button className='bg-[#440807] bg-opacity-95 flex-center text-white rounded mx-5 p-1' onClick={goBack}>Go to Home</button>
       <div className="min-h-screen flex items-center justify-center bg-cover" style={{ backgroundImage: "public/assets/images/c_background.jpg" }}>
         <div className="bg-white p-8 rounded shadow-md">
-          <h1 className="text-3xl font-bold mb-6">ADMİN GİRİŞİ</h1>
+          <h1 className="text-3xl font-bold mb-6">ADMIN PANEL</h1>
           <form onSubmit={handleForm} className="space-y-4">
             <div>
               <label htmlFor="email" className="block text-sm font-medium text-gray-600">
@@ -74,7 +74,7 @@ function Page() {
               type="submit"
               className="bg-[#440807] bg-opacity-95 text-white py-2 px-4 rounded hover:bg-red-950"
             >
-              GİRİŞ YAP
+              LOG IN
             </button>
           </form>
 
