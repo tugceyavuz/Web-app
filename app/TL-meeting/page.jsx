@@ -11,7 +11,7 @@ import axios from 'axios';
 
 function TlMeeting() {
   const router = useRouter();
-  const timerAmount = 60;
+  const timerAmount = 5*60;
   const [displayText, setDisplayText] = useState('');
   const [GptInput2, setGptInput2] = useState('')
   const [inputText, setInputText] = useState('');
