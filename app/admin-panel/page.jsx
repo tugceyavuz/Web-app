@@ -354,7 +354,6 @@ function AdminPanel() {
       
           // Only trigger when any userCount changes
           if (Object.keys(newUserCounts).length > 0 && JSON.stringify(newUserCounts) !== JSON.stringify(userCounts)) {
-            console.log('User counts changed:', newUserCounts);
             setUserCounts(newUserCounts);
             setTimeout(() => {
                 fetchEvents();

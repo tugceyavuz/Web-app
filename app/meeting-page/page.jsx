@@ -202,16 +202,17 @@ function Meeting() {
 
   const fetchProblemData = async () => {
     try {
-      const docRef = doc(db, 'events', eventId);
-      const eventSnapshot = await getDoc(docRef);
-      console.log(eventSnapshot.data().problems);
-      eventSnapshot.data().problems.forEach((item) => {
-        if (item.id == selectedProblem) {
-            setProblemData(item);
-        } else {
-          console.error('Selected problem not found in events collection.');
-        }
-      });
+      if(selectedProblem && eventId)
+      {
+        const docRef = doc(db, 'events', eventId);
+        const eventSnapshot = await getDoc(docRef);
+        console.log(eventSnapshot.data().problems);
+        eventSnapshot.data().problems.forEach((item) => {
+          if (item.id == selectedProblem) {
+              setProblemData(item);
+          }
+        });
+      }
     } catch (error) {
       console.error('Error fetching problem data:', error);
     }
