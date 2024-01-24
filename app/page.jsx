@@ -61,7 +61,7 @@ const Home = () => {
     setIsim(newName);
 
     // Enable or disable the button based on whether a name is entered
-    setIsButtonDisabled(!newName.trim());
+    setIsButtonDisabled(!newName.trim() || !selectedProblem.trim());
   };
 
   //add user to the problem
