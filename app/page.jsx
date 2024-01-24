@@ -183,7 +183,7 @@ const Home = () => {
             value={isim}
             onChange={handleIsimChange}
             className="w-80 p-3 border rounded focus:outline-none"
-            placeholder="KATILIMCI İSMİ"
+            placeholder="USERNAME"
           />
         </div>
 
