@@ -6,6 +6,7 @@ import { updateDoc } from 'firebase/firestore'
 import { set, ref, push, update, getDatabase, get, setDoc, onValue } from 'firebase/database';
 import { useRouter } from 'next/navigation';
 import { v4 as uuidv4 } from 'uuid';
+import { Alert } from '@mui/material';
 
 const Home = () => {
   const router = useRouter();
@@ -13,6 +14,7 @@ const Home = () => {
   const [isim, setIsim] = useState('');
   const [problemOptions, setProblemOptions] = useState([]);
   const [isButtonDisabled, setIsButtonDisabled] = useState(true);
+  const [buttonClicked, setButtonClicked] = useState(false);
 
   useEffect(() => {
     // Initialize Firebase Realtime Database
@@ -188,12 +190,20 @@ const Home = () => {
         {/* Join button */}
         <button
           type="submit"
-          className={`bg-[#440807] bg-opacity-95 text-white py-2 px-4 rounded hover:bg-red-950 bg-opacity-95 ${isButtonDisabled ? 'cursor-not-allowed opacity-50' : ''}`}
-          onClick={handleJoinClick}
+          className={`bg-[#440807] bg-opacity-95 text-white py-2 px-4 rounded hover:bg-red-950 bg-opacity-95 ${isButtonDisabled || buttonClicked ? 'cursor-not-allowed opacity-50' : ''}`}
+          onClick={() => {
+            if (!buttonClicked)  
+              handleJoinClick();
+              setButtonClicked(true);
+            }
+          }
           disabled={isButtonDisabled}
         >
           JOIN
         </button>
+        {buttonClicked && (
+            <Alert severity="success">Loading...</Alert>
+        )}
       </section>
     </section>
   );
