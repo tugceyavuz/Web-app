@@ -1,36 +1,13 @@
-This is a [Next.js](https://nextjs.org/) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
+Graduation project for Computer Engineering in Gebze Technical University 2024.
 
-## Getting Started
+The project entails the development of a collaborative web application specifically
+crafted for team-based brainstorming sessions. The application introduces three distinct
+user roles: session manager, table leader, and participant, with an innovative inclusion
+of ChatGPT as a participant. The primary objective is to facilitate a cohesive and
+dynamic brainstorming environment that seamlessly integrates human and artificial
+intelligence. The core methodology adopted is the 6-3-5 method, a structured creativity
+technique, wherein each of the N participants, usually six, generates three ideas within
+five minutes, fostering a systematic and efficient approach to idea generation within the
+collaborative framework.
 
-First, run the development server:
-
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
-
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
-
-You can start editing the page by modifying `app/page.js`. The page auto-updates as you edit the file.
-
-This project uses [`next/font`](https://nextjs.org/docs/basic-features/font-optimization) to automatically optimize and load Inter, a custom Google Font.
-
-## Learn More
-
-To learn more about Next.js, take a look at the following resources:
-
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js/) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/deployment) for more details.
+Project Report: [report.pdf](https://github.com/tugceyavuz/Web-app/files/14169561/report.pdf)
